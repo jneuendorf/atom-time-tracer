@@ -1,0 +1,30 @@
+// @import 'ui-variables';
+//
+//
+// @foreground-color: @text-color-success;
+//
+.status-bar {
+    .time-tracer {
+        height: 100%;
+
+        .timer {
+            margin-left: 4px !important;
+            height: 100%;
+
+            canvas {
+                position: relative;
+                top: 50%;
+                transform: scale(-1, 1) translateY(-50%);
+            }
+        }
+    }
+}
+
+canvas.time-tracer.report {
+    background-color: white;
+    left: 0;
+    position: absolute;
+    transform: scale(0.8);
+    top: -78px;
+    z-index: 9999;
+}
