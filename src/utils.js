@@ -62,7 +62,7 @@ export const getTimeracerConfig = async () => {
 }
 
 export const replacePlaceholders = (str, replacements) => {
-    return str.replace(/((%p)|(%t)|(%f))/g, match => {
+    return str.replace(/((%project)|(%tags)|(%files)|(%branches)|(%path))/g, match => {
         return replacements[match]
     })
 }

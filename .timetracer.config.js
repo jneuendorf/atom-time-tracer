@@ -1,5 +1,7 @@
 module.exports = {
     name: 'testname',
-    tags: '+a +b',
-    // preprocessChangedFiles: changedFiles => {},
+    tags: '+tag1 +tag2',
+    ui: {
+        preferedChartColors: 'red green',
+    },
 }

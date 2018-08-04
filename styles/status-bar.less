@@ -20,11 +20,14 @@
     }
 }
 
-canvas.time-tracer.report {
-    background-color: white;
-    left: 0;
-    position: absolute;
-    transform: scale(0.8);
-    top: -78px;
-    z-index: 9999;
+time-tracer-report {
+    text-align: center;
+    &:hover {
+        overflow: scroll;
+    }
+
+    canvas {
+        background-color: white;
+        transform: scale(0.995);
+    }
 }

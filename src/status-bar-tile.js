@@ -10,8 +10,8 @@ export default class StatusBarTile {
 
         const wrapper = document.createElement('span')
         wrapper.innerHTML = `<div class='inline-block time-tracer'>
-            <a class="icon icon-clock"></a>
             <div class='inline-block stats'></div>
+            <button class='btn btn-xs icon icon-graph inline-block-tight'></button>
             <div class='inline-block timer'>
                 <canvas width='14' height='14'></canvas>
             </div>
@@ -67,8 +67,8 @@ export default class StatusBarTile {
     render(props) {
         const {seconds, percent} = props
         if (seconds != null && seconds !== this.props.seconds) {
-            const humanizedTime =   moment.duration(seconds, 'seconds').humanize()
-            this.stats.innerHTML = humanizedTime
+            const {workDays} = this.getTimeData(seconds)
+            this.stats.innerHTML = `${workDays}d`
         }
         if (percent != null && percent !== this.props.percent) {
             this.pieChart.data.datasets[0].data = this.getData(percent)
@@ -81,8 +81,26 @@ export default class StatusBarTile {
         return [percent, 1 - percent]
     }
 
+    getTimeData(seconds=this.props.seconds) {
+        const secondsPerMinute = 60
+        const secondsPerHour = 60 * secondsPerMinute
+        const secondsPerWorkDay = 8 * secondsPerHour
+
+        const workDays = Math.floor(seconds / secondsPerWorkDay)
+        seconds -= workDays * secondsPerWorkDay
+        const hours = Math.floor(seconds / secondsPerHour)
+        seconds -= hours * secondsPerHour
+        const minutes = Math.floor(seconds / secondsPerMinute)
+        return {
+            workDays,
+            hours,
+            minutes,
+        }
+    }
+
     getTooltip = () => {
-        return `time-tracer: ${moment.duration(this.props.seconds, 'seconds').humanize()}`
+        const {workDays, hours, minutes} = this.getTimeData()
+        return `time-tracer: ${workDays > 0 ? `${workDays}d` : ''} ${hours}h ${minutes}m`
     }
 
     destroy() {

@@ -1,7 +1,5 @@
 'use babel'
 
-import Chart from 'chart.js/dist/Chart.bundle.min.js'
-import moment from 'moment'
 import throttle from 'lodash.throttle'
 
 import StatusBarTile from './status-bar-tile'
@@ -13,9 +11,13 @@ import {
     runCommand,
     getWindowId,
     setWindowId,
-    setMinus,
     getTagColor,
 } from './utils'
+
+
+const TIME_TRACER_REPORT_URI = 'time-tracer://report'
+// Lazily imported in Atom opener.
+let TimeTracerReportView
 
 
 class TimeTracer {
@@ -24,23 +26,43 @@ class TimeTracer {
     timer = null
     statusBarInterval = null
     isTracking = false
-    // stoppedAfterTimeout = false
+    reportData = null
 
     _throttledHandleActivity = null
 
     async activate(state) {
-        const timetracerConfig = await getTimeracerConfig()
-        const chartColors = getSetting('tracking.preferedChartColors')
+        let didActivate
+        this.activationPromise = new Promise((resolve, reject) => {
+            didActivate = resolve
+        })
+        const {
+            tracking={},
+            tool={},
+            ui: {preferedChartColors, ...ui},
+            ...general
+        } = await getTimeracerConfig()
+        // TODO: subscribe to config changes (https://atom.io/docs/api/v1.28.2/Config#instance-onDidChange)
         this.settings = {
-            ...timetracerConfig,
+            ...general,
             tracking: {
                 startOnOpen: getSetting('tracking.startOnOpen'),
                 waitTillAutoStop: getSetting('tracking.waitTillAutoStop'),
                 regardedEvents: getSetting('tracking.regardedEvents').split(' '),
-                // parallel: getSetting('tracking.parallel'),
-                chartColors: (() => {
+                ...tracking,
+            },
+            tool: {
+                start: getSetting('tool.start'),
+                stop: getSetting('tool.stop'),
+                report: getSetting('tool.report'),
+                log: getSetting('tool.log'),
+                ...tool,
+            },
+            ui: {
+                showInStatusBar: getSetting('ui.showInStatusBar'),
+                openReportInSplitPane: getSetting('ui.openReportInSplitPane'),
+                preferedChartColors: (() => {
                     let index = 0
-                    const colors = chartColors.split(' ')
+                    const colors = preferedChartColors.split(' ')
                     const usedIndices = {}
                     return tag => {
                         let color
@@ -58,23 +80,17 @@ class TimeTracer {
                         return color
                     }
                 })(),
-            },
-            tool: {
-                start: getSetting('tool.start'),
-                stop: getSetting('tool.stop'),
-                report: getSetting('tool.report'),
-                log: getSetting('tool.log'),
+                ...ui,
             },
         }
-        console.log(this.settings)
 
         this.currentWindow = atom.getCurrentWindow()
         this.currentWindow.on('focus', this.handleFocusWindow)
-        // this.currentWindow.on('closed', this.stop)
 
+        // The file watcher is used for outside-of-Atom file changes.
         this.fileWatcher = atom.project.onDidChangeFiles(this.handleActivity)
         for (const eventType of this.settings.tracking.regardedEvents) {
-            document.addEventListener(
+            document.body.addEventListener(
                 eventType,
                 this.handleActivity,
             )
@@ -85,22 +101,37 @@ class TimeTracer {
         }
 
         atom.commands.add('atom-workspace', Commands.boundTo(this))
+        atom.workspace.addOpener(uri => {
+            if (uri === TIME_TRACER_REPORT_URI) {
+                if (!TimeTracerReportView) {
+                    TimeTracerReportView = require('./time-tracer-report-view')
+                }
+                return new TimeTracerReportView(
+                    this.settings,
+                    this.reportData,
+                )
+            }
+        })
+        didActivate()
     }
 
     deactivate() {
         this.stop()
         this.fileWatcher.dispose()
-        this.statusBarTile.destroy()
+        this.statusBarTile && this.statusBarTile.destroy()
         for (const eventType of this.settings.tracking.regardedEvents) {
-            document.removeEventListener(
+            document.body.removeEventListener(
                 eventType,
                 this.handleActivity,
             )
         }
     }
 
-    consumeStatusBar(statusBar) {
-        this.statusBarTile = new StatusBarTile(statusBar)
+    async consumeStatusBar(statusBar) {
+        await this.activationPromise
+        if (this.settings.ui.showInStatusBar) {
+            this.statusBarTile = new StatusBarTile(statusBar)
+        }
     }
 
     async start() {
@@ -121,7 +152,6 @@ class TimeTracer {
             else {
                 console.log('stdout:', stdout)
                 this.isTracking = true
-                // this.stoppedAfterTimeout = false
             }
         }
         catch (error) {
@@ -195,87 +225,17 @@ class TimeTracer {
     async report() {
         const command = this._getCommand('log')
         const {stdout} = await runCommand(command)
-        const reportData = JSON.parse(stdout)
         // this.assertShape(reportData)
         // console.log(reportData)
+        this.reportData = JSON.parse(stdout)
 
-        const dataByTag = {}
-        const xValues = new Set()
-        const xValuesByTag = {}
-        reportData.forEach(datum => {
-            const {start, stop, tags} = datum
-            const x = moment(start).format('YYYY-MM-DD')
-            const y = moment.duration(moment(stop).diff(start)).asHours()
-            for (const tag of tags) {
-                if (!dataByTag[tag]) {
-                    dataByTag[tag] = new Map()
-                    xValuesByTag[tag] = new Set()
-                }
-                if (dataByTag[tag].has(x)) {
-                    dataByTag[tag].set(x, dataByTag[tag].get(x) + y)
-                }
-                else {
-                    dataByTag[tag].set(x, y)
-                }
-                xValues.add(x)
-                xValuesByTag[tag].add(x)
-            }
-        })
-        // Fill in empty values
-        for (const [tag, tagData] of Object.entries(dataByTag)) {
-            for (const missingX of setMinus(xValues, xValuesByTag[tag])) {
-                console.log('filled', missingX, 'for', tag)
-                tagData.push({x: missingX, y: 0})
-            }
+        const prevActivePane = atom.workspace.getActivePane()
+        const options = {searchAllPanes: true}
+        if (this.settings.ui.openReportInSplitPane) {
+            options.split = 'right'
         }
-        const datasets = Object.entries(dataByTag).map(([tag, tagData]) => {
-            const color = this.settings.tracking.chartColors(tag)
-            console.log('color:', color)
-            return {
-                data: [...tagData.entries()].map(([x, y]) => ({x, y})),
-                label: tag,
-                fill: false,
-                backgroundColor: color,
-                borderColor: color,
-                borderWidth: 1,
-            }
-        })
-        console.log(datasets)
-        const canvas = document.createElement('canvas')
-        canvas.classList.add('time-tracer', 'report')
-        // canvas.width = '75%'
-        // canvas.height = '75%'
-        document.body.appendChild(canvas)
-
-        const barChart = new Chart(canvas, {
-            type: 'bar',
-            data: {
-                datasets,
-            },
-            options: {
-                title: {
-                    display: true,
-                    text: this.settings.name,
-                },
-                scales: {
-                    xAxes: [{
-                        type: 'time',
-                        time: {
-                            unit: 'day',
-                            unitStepSize: 1,
-                            displayFormats: {
-                               'day': 'MMM DD',
-                           },
-                        },
-                        stacked: true,
-                    }],
-                    yAxes: [{
-                        stacked: true,
-                    }],
-                },
-            },
-        })
-        // console.log(barChart)
+        await atom.workspace.open(TIME_TRACER_REPORT_URI, options)
+        prevActivePane.activate()
     }
 
     async getSeconds() {
@@ -286,27 +246,27 @@ class TimeTracer {
 
     }
 
-    _getCommand(type, changedFiles=[]) {
+    _getCommand(type) {
         return replacePlaceholders(this.settings.tool[type], {
-            '%p': this.settings.name,
-            '%t': this.settings.tags,
-            '%f': this._preprocessChangedFiles(changedFiles),
+            '%project': this.settings.name,
+            '%tags': this.settings.tags,
+            '%branches': (
+                atom.project
+                .getRepositories()
+                .filter(repo => repo)
+                .map(repo => repo.getShortHead())
+                .join(' ')
+            ),
+            '%path': atom.project.getPaths()[0],
         })
     }
 
-    _preprocessChangedFiles(changedFiles) {
-        if (this.settings.preprocessChangedFiles) {
-            return this.settings.preprocessChangedFiles(changedFiles)
-        }
-        return changedFiles.join(' ')
-    }
-
     // throttled for i.e. scrolling
-    handleActivity = async () => {
+    handleActivity = async event => {
         if (!this._throttledHandleActivity) {
             this._throttledHandleActivity = throttle(
-                async () => {
-                    console.log('handling user activity....')
+                async event => {
+                    console.log('handling user activity....', event && event.type)
                     await this.start()
                     this.resetTimer()
                 },
@@ -314,7 +274,7 @@ class TimeTracer {
                 {leading: true, trailing: false}
             )
         }
-        return await this._throttledHandleActivity()
+        return await this._throttledHandleActivity(event)
     }
 
     handleFocusWindow = async () => {
@@ -338,7 +298,7 @@ class TimeTracer {
     }
 
     updateStatusBar(props) {
-        this.statusBarTile.render(props)
+        this.statusBarTile && this.statusBarTile.render(props)
     }
 }
 
