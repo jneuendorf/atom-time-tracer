@@ -130,7 +130,7 @@ class TimeTracer {
     async consumeStatusBar(statusBar) {
         await this.activationPromise
         if (this.settings.ui.showInStatusBar) {
-            this.statusBarTile = new StatusBarTile(statusBar)
+            this.statusBarTile = new StatusBarTile(statusBar, this)
         }
     }
 
@@ -222,7 +222,7 @@ class TimeTracer {
         this.lastEdit = now
     }
 
-    async report() {
+    report = async() => {
         const command = this._getCommand('log')
         const {stdout} = await runCommand(command)
         // this.assertShape(reportData)

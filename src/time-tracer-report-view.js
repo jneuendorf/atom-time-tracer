@@ -38,7 +38,7 @@ class TimeTracerReportView extends HTMLElement {
         for (const [tag, tagData] of Object.entries(dataByTag)) {
             for (const missingX of setMinus(xValues, xValuesByTag[tag])) {
                 console.log('filled', missingX, 'for', tag)
-                tagData.push({x: missingX, y: 0})
+                tagData.set(missingX ,0)
             }
         }
         const datasets = Object.entries(dataByTag).map(([tag, tagData]) => {

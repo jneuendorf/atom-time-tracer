@@ -1,12 +1,12 @@
 'use babel'
 
 import Chart from 'chart.js/dist/Chart.min.js'
-import moment from 'moment'
 
 
 export default class StatusBarTile {
-    constructor(statusBar) {
+    constructor(statusBar, timeTracer) {
         this.props = {}
+        this.timeTracer = timeTracer
 
         const wrapper = document.createElement('span')
         wrapper.innerHTML = `<div class='inline-block time-tracer'>
@@ -24,6 +24,9 @@ export default class StatusBarTile {
         )
 
         this.stats = this.element.querySelector('.stats')
+        this.reportButton = this.element.querySelector('button.icon-graph')
+
+        this.reportButton.addEventListener('click', timeTracer.report)
 
         this.pieChart = new Chart(this.element.querySelector('canvas'), {
             type: 'pie',
@@ -106,5 +109,6 @@ export default class StatusBarTile {
     destroy() {
         this.statusBarTile.destroy()
         this.tooltipDisposable.dispose()
+        this.reportButton.removeEventListener('click', this.timeTracer.report)
     }
 }
