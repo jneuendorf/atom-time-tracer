@@ -4057,10 +4057,6 @@ type-check@~0.3.2:
   dependencies:
     prelude-ls "~1.1.2"
 
-typed-try-catch@^1.1.0:
-  version "1.1.0"
-  resolved "https://registry.yarnpkg.com/typed-try-catch/-/typed-try-catch-1.1.0.tgz#11a63a96fbddc8d03cf0c8c86f53caa5331d1054"
-
 typedarray@^0.0.6:
   version "0.0.6"
   resolved "https://registry.yarnpkg.com/typedarray/-/typedarray-0.0.6.tgz#867ac74e3864187b1d3d47d996a78ec5c8830777"

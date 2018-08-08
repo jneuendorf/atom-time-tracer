@@ -109,14 +109,23 @@ export const config = {
                 default: true,
                 title: 'Show tracked time in status bar',
             },
-            openReportInSplitPane: {
+            hoursPerWorkDay: {
                 order: 2,
+                type: 'integer',
+                default: 8,
+                minimum: 1,
+                maximum: 24,
+                title: 'Hours per work day',
+                description: 'This affects the calculation of the status bar\'s tile\'s tooltip',
+            },
+            openReportInSplitPane: {
+                order: 3,
                 type: 'boolean',
                 default: true,
                 title: 'Open report chart in a split pane',
             },
             preferedChartColors: {
-                order: 3,
+                order: 4,
                 type: 'string',
                 default: '',
                 title: 'Prefered chart colors',

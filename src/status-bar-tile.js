@@ -10,31 +10,50 @@ export default class StatusBarTile {
 
         const wrapper = document.createElement('span')
         wrapper.innerHTML = `<div class='inline-block time-tracer'>
-            <div class='inline-block stats'></div>
-            <button class='btn btn-xs icon icon-graph inline-block-tight'></button>
+            <span class="icon icon-watch"></span>
             <div class='inline-block timer'>
                 <canvas width='14' height='14'></canvas>
             </div>
+            ${''/* Used for figuring out the current theme's colors. */}
+            <div class='hidden color-info'></div>
         </div>`
-        this.element = wrapper.children[0]
+        this.tileElement = wrapper.children[0]
+        this.tileElement.addEventListener('click', timeTracer.report)
+        this.tileElement.addEventListener('mouseenter', this.updateTooltip)
 
+        // Add tile to the DOM.
+        const leftTiles = statusBar.getLeftTiles()
+        let maxPrio = 0
+        for (const tile of leftTiles) {
+            const prio = tile.getPriority()
+            if (prio > maxPrio) {
+                maxPrio = prio
+            }
+        }
+        this.statusBarTile = statusBar.addLeftTile({
+            item: this.tileElement,
+            priority: maxPrio + 1,
+        })
+
+        this.tooltipElement = document.createElement('span')
         this.tooltipDisposable = atom.tooltips.add(
-            this.element,
-            {title: this.getTooltip}
+            this.tileElement,
+            {item: this.tooltipElement},
         )
 
-        this.stats = this.element.querySelector('.stats')
-        this.reportButton = this.element.querySelector('button.icon-graph')
-
-        this.reportButton.addEventListener('click', timeTracer.report)
-
-        this.pieChart = new Chart(this.element.querySelector('canvas'), {
+        // The computed style can be retrieved only after the element was added
+        // to the DOM.
+        const successColor = (
+            window.getComputedStyle(this.tileElement.querySelector('.color-info'))
+            .getPropertyValue('color')
+        )
+        this.pieChart = new Chart(this.tileElement.querySelector('canvas'), {
             type: 'pie',
             data: {
                 datasets: [{
                     data: this.getData(0),
                     backgroundColor: [
-                        'rgb(102, 240, 67)', 'rgba(0, 0, 0, 0)',
+                        successColor, 'rgba(0, 0, 0, 0)',
                     ],
                     borderWidth: [0, 0],
                     hoverBorderWidth: [0, 0],
@@ -52,28 +71,12 @@ export default class StatusBarTile {
                 },
             },
         })
-
-        const leftTiles = statusBar.getLeftTiles()
-        let maxPrio = 0
-        for (const tile of leftTiles) {
-            const prio = tile.getPriority()
-            if (prio > maxPrio) {
-                maxPrio = prio
-            }
-        }
-        this.statusBarTile = statusBar.addLeftTile({
-            item: this.element,
-            priority: maxPrio + 1,
-        })
     }
 
     render(props) {
-        const {seconds, percent} = props
-        if (seconds != null && seconds !== this.props.seconds) {
-            const {workDays} = this.getTimeData(seconds)
-            this.stats.innerHTML = `${workDays}d`
-        }
+        const {percent} = props
         if (percent != null && percent !== this.props.percent) {
+            console.log('rendering percent', percent, this.props.percent)
             this.pieChart.data.datasets[0].data = this.getData(percent)
             this.pieChart.update()
         }
@@ -84,10 +87,18 @@ export default class StatusBarTile {
         return [percent, 1 - percent]
     }
 
-    getTimeData(seconds=this.props.seconds) {
+    updateTooltip = async () => {
+        this.tooltipElement.innerHTML = `<span class='loading loading-spinner-tiny'></span>`
+        const {workDays, hours, minutes} = await this.getTimeData()
+        const text = `${workDays > 0 ? `${workDays}d` : ''} ${hours}h ${minutes}m`
+        this.tooltipElement.innerText = text
+    }
+
+    async getTimeData() {
+        let seconds = await this.timeTracer.getSeconds()
         const secondsPerMinute = 60
         const secondsPerHour = 60 * secondsPerMinute
-        const secondsPerWorkDay = 8 * secondsPerHour
+        const secondsPerWorkDay = this.timeTracer.settings.ui.hoursPerWorkDay * secondsPerHour
 
         const workDays = Math.floor(seconds / secondsPerWorkDay)
         seconds -= workDays * secondsPerWorkDay
@@ -101,14 +112,10 @@ export default class StatusBarTile {
         }
     }
 
-    getTooltip = () => {
-        const {workDays, hours, minutes} = this.getTimeData()
-        return `time-tracer: ${workDays > 0 ? `${workDays}d` : ''} ${hours}h ${minutes}m`
-    }
-
     destroy() {
         this.statusBarTile.destroy()
         this.tooltipDisposable.dispose()
-        this.reportButton.removeEventListener('click', this.timeTracer.report)
+        this.tileElement.removeEventListener('click', this.timeTracer.report)
+        this.tileElement.removeEventListener('mouseenter', this.updateTooltip)
     }
 }

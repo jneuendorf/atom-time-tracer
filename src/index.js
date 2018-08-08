@@ -59,6 +59,7 @@ class TimeTracer {
             },
             ui: {
                 showInStatusBar: getSetting('ui.showInStatusBar'),
+                hoursPerWorkDay: getSetting('ui.hoursPerWorkDay'),
                 openReportInSplitPane: getSetting('ui.openReportInSplitPane'),
                 preferedChartColors: (() => {
                     let index = 0
@@ -195,19 +196,16 @@ class TimeTracer {
         clearTimeout(this.timer)
         clearInterval(this.statusBarInterval)
 
-        const seconds = await this.getSeconds()
-
         const now = Date.now()
         const {waitTillAutoStop} = this.settings.tracking
         const msTillAutoStop = waitTillAutoStop * 1000
         if (now - this.lastEdit > msTillAutoStop && this.lastEdit > 0) {
             this.stop()
-            // this.stoppedAfterTimeout = true
-            this.updateStatusBar({seconds, percent: 0})
+            this.updateStatusBar({percent: 0})
         }
         else {
             this.timer = setTimeout(() => this.resetTimer(), msTillAutoStop)
-            this.updateStatusBar({seconds, percent: 1})
+            this.updateStatusBar({percent: 1})
             const tickMs = Math.max(1000, msTillAutoStop / 100)
             let elapsed = 0
             this.statusBarInterval = setInterval(() => {

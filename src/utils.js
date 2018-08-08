@@ -5,7 +5,6 @@ import {exec} from 'child_process'
 import os from 'os'
 
 import fs from 'fs-extra'
-import attempt from 'typed-try-catch'
 
 
 const getProjectName = () => {
@@ -44,21 +43,20 @@ export const getTimeracerConfig = async () => {
     }
 
     let config
-    attempt(() => {
+    try {
         const [_, configFile] = positives[0]
         console.log('using', configFile)
         config = {
             ...defaultConfig,
             ...require(configFile),
         }
-    })
-    .catch(Error, error => {
+    }
+    catch (error) {
         console.log('using default config because of error')
         console.error(error.message)
         config = defaultConfig
-    }).run()
+    }
     return config
-    // return await fs.readFile(configFile, {encoding: 'utf8'})
 }
 
 export const replacePlaceholders = (str, replacements) => {
@@ -82,19 +80,6 @@ export const runCommand = command => {
     })
 }
 
-// export const generateTmpPath = filename => {
-//     return path.join(
-//         os.tmpdir(), 'time-tracer', filename
-//     )
-// }
-
-// export const createTmpFile = async (filename, content) => {
-//     const tmpfilePath = generateTmpPath(filename)
-//     await fs.ensureDir(path.dirname(tmpfilePath))
-//     await fs.writeFile(tmpfilePath, content)
-//     return tmpfilePath
-// }
-
 const WINDOW_ID_FILENAME = path.join(
     os.tmpdir(),
     'time-tracer',
@@ -115,10 +100,6 @@ export const setWindowId = async id => {
     await fs.ensureDir(path.dirname(WINDOW_ID_FILENAME))
     await fs.writeFile(WINDOW_ID_FILENAME, `${id}`)
 }
-
-// export const roundToNearestTen = n => {
-//     return Math.ceil(n / 10) * 10
-// }
 
 export const setMinus = (setA, setB) => {
     const diff = new Set(setA)
@@ -153,17 +134,3 @@ export const getTagColor = tag => {
     }
     return `rgb(${getTagColorCache[tag].join(',')})`
 }
-
-// // https://stackoverflow.com/a/16348977/6928824
-// export const stringToColor = str => {
-//     let hash = 0
-//     for (var i = 0; i < str.length; i++) {
-//         hash = str.charCodeAt(i) + ((hash << 5) - hash)
-//     }
-//     let color = '#'
-//     for (let i = 0; i < 3; i++) {
-//         const value = (hash >> (i * 8)) & 0xFF
-//         color += ('00' + value.toString(16)).substr(-2)
-//     }
-//     return color
-// }
