@@ -4,17 +4,11 @@
 const Chart = require('chart.js/dist/Chart.bundle.min.js')
 const moment = require('moment')
 
-const {setMinus} = require('./utils')
-
 
 class TimeTracerReportView extends HTMLElement {
-
     constructor(settings, data) {
         super()
-
         const dataByTag = {}
-        const xValues = new Set()
-        const xValuesByTag = {}
         data.forEach(datum => {
             const {start, stop, tags} = datum
             const x = moment(start).format('YYYY-MM-DD')
@@ -22,7 +16,6 @@ class TimeTracerReportView extends HTMLElement {
             for (const tag of tags) {
                 if (!dataByTag[tag]) {
                     dataByTag[tag] = new Map()
-                    xValuesByTag[tag] = new Set()
                 }
                 if (dataByTag[tag].has(x)) {
                     dataByTag[tag].set(x, dataByTag[tag].get(x) + y)
@@ -30,24 +23,18 @@ class TimeTracerReportView extends HTMLElement {
                 else {
                     dataByTag[tag].set(x, y)
                 }
-                xValues.add(x)
-                xValuesByTag[tag].add(x)
             }
         })
-        // Fill in empty values
-        for (const [tag, tagData] of Object.entries(dataByTag)) {
-            for (const missingX of setMinus(xValues, xValuesByTag[tag])) {
-                console.log('filled', missingX, 'for', tag)
-                tagData.set(missingX ,0)
-            }
-        }
         const datasets = Object.entries(dataByTag).map(([tag, tagData]) => {
             const color = settings.ui.preferedChartColors(tag)
             return {
                 data: [...tagData.entries()].map(([x, y]) => ({x, y})),
                 label: tag,
                 fill: false,
-                backgroundColor: color,
+                backgroundColor: color.replace(
+                    /rgb\((\d+),(\d+),(\d+)\)/,
+                    'rgba($1,$2,$3,0.3)'
+                ),
                 borderColor: color,
                 borderWidth: 1,
             }

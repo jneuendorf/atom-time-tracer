@@ -165,14 +165,6 @@ export const setWindowId = async id => {
     await fs.writeFile(WINDOW_ID_FILENAME, `${id}`)
 }
 
-export const setMinus = (setA, setB) => {
-    const diff = new Set(setA)
-    for (const elem of setB) {
-        diff.delete(elem)
-    }
-    return diff
-}
-
 // Returns a random integer between min (inclusive) and max (inclusive).
 // https://stackoverflow.com/a/1527820/6928824
 const randomInt = (max, min=0) => {

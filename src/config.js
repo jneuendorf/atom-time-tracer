@@ -129,7 +129,7 @@ export const config = {
                 type: 'string',
                 default: '',
                 title: 'Prefered chart colors',
-                description: 'List of space separated color strings. See http://www.chartjs.org/docs/latest/general/colors.html#colors for valid colors. If not specified or insufficient random colors will be used.',
+                description: 'List of space separated color strings (thus no spaces allowed between color values). See http://www.chartjs.org/docs/latest/general/colors.html#colors for valid colors. If not specified or insufficient random colors will be used.',
             },
         },
     },

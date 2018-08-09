@@ -211,7 +211,6 @@ class TimeTracer {
         const {stdout} = await runCommand(command)
         const reportData = JSON.parse(stdout)
         return reportData.time
-
     }
 
     _getCommand(type) {
