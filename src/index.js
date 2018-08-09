@@ -1,6 +1,7 @@
 'use babel'
 
 import throttle from 'lodash.throttle'
+import moment from 'moment'
 
 import StatusBarTile from './status-bar-tile'
 import Commands from './commands'
@@ -195,15 +196,34 @@ class TimeTracer {
         const {stdout} = await runCommand(command)
         // this.assertShape(reportData)
         // console.log(reportData)
-        this.reportData = JSON.parse(stdout)
-
-        const prevActivePane = atom.workspace.getActivePane()
-        const options = {searchAllPanes: true}
-        if (this.settings.ui.openReportInSplitPane) {
-            options.split = 'right'
+        let reportData
+        try {
+            reportData = JSON.parse(stdout)
         }
-        await atom.workspace.open(TIME_TRACER_REPORT_URI, options)
-        prevActivePane.activate()
+        catch (error) {
+            atom.notifications.addError(
+                'Invalid report data. Your log command must return valid JSON.'
+            )
+            return
+        }
+
+        const {start, stop, tags} = reportData
+        if (moment(start).isValid() && moment(stop).isValid() && Array.isArray(tags)) {
+            this.reportData = reportData
+            const prevActivePane = atom.workspace.getActivePane()
+            const options = {searchAllPanes: true}
+            if (this.settings.ui.openReportInSplitPane) {
+                options.split = 'right'
+            }
+            await atom.workspace.open(TIME_TRACER_REPORT_URI, options)
+            prevActivePane.activate()
+        }
+        else {
+            atom.notifications.addError(
+                'Invalid report data. Expected shape {start, stop, tags} where start and '
+                + 'stop and momentjs compatible and tags is an array of strings.'
+            )
+        }
     }
 
     async getSeconds() {

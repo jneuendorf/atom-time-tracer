@@ -21,7 +21,7 @@ export const getTimeracerConfig = async () => {
     const results = await Promise.all(
         projectPaths
         .map(projectPath => {
-            const configFile = path.join(projectPath, '.timetracer.config.js')
+            const configFile = path.join(projectPath, 'timetracer.config.js')
             return (
                 fs.pathExists(configFile)
                 .then(exists => [exists, configFile])
