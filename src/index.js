@@ -14,6 +14,7 @@ import {
     getWindowId,
     setWindowId,
     defaultColorGenerator,
+    log,
 } from './utils'
 
 
@@ -145,7 +146,6 @@ class TimeTracer {
             return
         }
 
-        console.log('stopping......', atom.getCurrentWindow().getTitle())
         const command = this._getCommand('stop')
         const success = await tryRunCommand(command, {
             stderrNotificationText: stderr => {
@@ -194,8 +194,6 @@ class TimeTracer {
     report = async() => {
         const command = this._getCommand('log')
         const {stdout} = await runCommand(command)
-        // this.assertShape(reportData)
-        // console.log(reportData)
         let reportData
         try {
             reportData = JSON.parse(stdout)
@@ -253,7 +251,7 @@ class TimeTracer {
         if (!this._throttledHandleActivity) {
             this._throttledHandleActivity = throttle(
                 async event => {
-                    console.log('handling user activity....', event && event.type)
+                    log('handling user activity....', event && event.type)
                     await this.start()
                     this.resetTimer()
                 },
@@ -269,7 +267,7 @@ class TimeTracer {
         const {id: currentWindowId} = this.currentWindow
         const prevWindowWasAtom = prevWindowId !== currentWindowId
         if (prevWindowWasAtom) {
-            console.log('prev window was another atom window!')
+            log('prev window was another atom window!')
             // The stop command must stop everything including other projects'
             // trackings.
             await this.stop()
@@ -278,9 +276,7 @@ class TimeTracer {
         }
         // else: Prev window was another App than Atom. We don't do anything.
         else {
-            if (atom.inDevMode()) {
-                console.log('prev window was another app!')
-            }
+            log('prev window was another app!')
         }
     }
 

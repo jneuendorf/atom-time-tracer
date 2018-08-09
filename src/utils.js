@@ -6,6 +6,11 @@ import os from 'os'
 
 import fs from 'fs-extra'
 
+export const log = (
+    atom.inDevMode()
+    ? (...args) => console.log(...args)
+    : () => {}
+)
 
 const getProjectName = () => {
     return (
@@ -38,22 +43,22 @@ export const getTimeracerConfig = async () => {
         tags: '',
     }
     if (positives.length === 0) {
-        console.log('using NO config file...')
+        log('using NO config file...')
         return defaultConfig
     }
 
     let config
     try {
         const [_, configFile] = positives[0]
-        console.log('using', configFile)
+        log('using', configFile)
         config = {
             ...defaultConfig,
             ...require(configFile),
         }
     }
     catch (error) {
-        console.log('using default config because of error')
-        console.error(error.message)
+        log('using default config because of error')
+        error(error.message)
         config = defaultConfig
     }
     return config
@@ -97,7 +102,6 @@ export const replacePlaceholders = (str, replacements) => {
 // TODO: Use https://atom.io/docs/api/v1.28.2/BufferedProcess ?
 export const runCommand = command => {
     return new Promise((resolve, reject) => {
-        console.log('running', command)
         exec(command, (error, stdout, stderr) => {
             if (error) {
                 reject(error)
@@ -120,7 +124,7 @@ export const tryRunCommand = async (command, options={}) => {
     try {
         const {stdout, stderr} = await runCommand(command)
         if (stderr) {
-            console.warn(stderr)
+            log('stderr:', stderr)
             atom.notifications.addWarning(
                 stderrNotificationText(stderr),
                 {dismissable: stderrDismissable},
@@ -128,7 +132,7 @@ export const tryRunCommand = async (command, options={}) => {
             return false
         }
         else {
-            console.log('stdout:', stdout)
+            log('stdout:', stdout)
             return true
         }
     }
@@ -149,7 +153,7 @@ const WINDOW_ID_FILENAME = path.join(
     'time-tracer',
     'focused_window_id.txt',
 )
-console.log('using', WINDOW_ID_FILENAME)
+log('using', WINDOW_ID_FILENAME)
 export const getWindowId = async () => {
     if (await fs.pathExists(WINDOW_ID_FILENAME)) {
         const content = await fs.readFile(WINDOW_ID_FILENAME, 'utf8')

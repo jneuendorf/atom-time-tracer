@@ -2,6 +2,8 @@
 
 import Chart from 'chart.js/dist/Chart.min.js'
 
+import {log} from './utils'
+
 
 export default class StatusBarTile {
     constructor(statusBar, timeTracer) {
@@ -76,7 +78,7 @@ export default class StatusBarTile {
     render(props) {
         const {percent} = props
         if (percent != null && percent !== this.props.percent) {
-            console.log('rendering percent', percent, this.props.percent)
+            log('rendering percent', percent, this.props.percent)
             this.pieChart.data.datasets[0].data = this.getData(percent)
             this.pieChart.update()
         }

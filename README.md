@@ -26,7 +26,12 @@ for details.
 
 Unless disabled, there is a status bar tile which shows a watch and the time until the timer
 will be stopped (using a mini pie chart).
-On hover the time spent on the project is displayed. 
+On hover the time spent on the project is displayed (days mean work days - the amount of hours per work day can be configured).
 On click a chart is displayed showing how much you worked on what tags.
 
 ![Status bar tile screenshot](./img/status-bar-tile.png)
+
+## Thanks to
+
+- [Akuma901](https://github.com/Akuma901) and his [time tracker](https://github.com/Akuma901/atom-time-tracker)
+  for inspiration for the status bar tile
