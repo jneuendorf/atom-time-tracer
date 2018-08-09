@@ -59,6 +59,35 @@ export const getTimeracerConfig = async () => {
     return config
 }
 
+export const defaultColorGenerator = preferedChartColors => {
+    let index = 0
+    const colors = preferedChartColors.split(' ')
+    const usedIndices = {}
+    return tag => {
+        let color
+        if (usedIndices.hasOwnProperty(tag)) {
+            color = colors[usedIndices[tag]]
+        }
+        else {
+            const i = index++
+            usedIndices[tag] = i
+            color = colors[i]
+        }
+        if (!color) {
+            color = getTagColor(tag)
+        }
+        return color
+    }
+}
+
+let getTagColorCache = {}
+export const getTagColor = tag => {
+    if (!getTagColorCache[tag]) {
+        getTagColorCache[tag] = generateRandomColor([178, 240, 129])
+    }
+    return `rgb(${getTagColorCache[tag].join(',')})`
+}
+
 export const replacePlaceholders = (str, replacements) => {
     return str.replace(/((%project)|(%tags)|(%files)|(%branches)|(%path))/g, match => {
         return replacements[match]
@@ -78,6 +107,41 @@ export const runCommand = command => {
             }
         })
     })
+}
+
+export const tryRunCommand = async (command, options={}) => {
+    const {
+        stderrNotificationText=(stderr => stderr),
+        stderrDismissable=true,
+        errorNotificationText=(error => error.message),
+        errorDismissable=true,
+        shouldIgnoreError=(error => false)
+    } = options
+    try {
+        const {stdout, stderr} = await runCommand(command)
+        if (stderr) {
+            console.warn(stderr)
+            atom.notifications.addWarning(
+                stderrNotificationText(stderr),
+                {dismissable: stderrDismissable},
+            )
+            return false
+        }
+        else {
+            console.log('stdout:', stdout)
+            return true
+        }
+    }
+    catch (error) {
+        if (shouldIgnoreError(error)) {
+            return true
+        }
+        atom.notifications.addError(
+            errorNotificationText(error),
+            {dismissable: errorDismissable},
+        )
+        return false
+    }
 }
 
 const WINDOW_ID_FILENAME = path.join(
@@ -125,12 +189,4 @@ const generateRandomColor = ([mixRed, mixGreen, mixBlue]) => {
     green = (green + mixGreen) / 2
     blue = (blue + mixBlue) / 2
     return [red, green, blue].map(Math.floor)
-}
-
-let getTagColorCache = {}
-export const getTagColor = tag => {
-    if (!getTagColorCache[tag]) {
-        getTagColorCache[tag] = generateRandomColor([178, 240, 129])
-    }
-    return `rgb(${getTagColorCache[tag].join(',')})`
 }

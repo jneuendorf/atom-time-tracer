@@ -9,9 +9,10 @@ import {
     getTimeracerConfig,
     replacePlaceholders,
     runCommand,
+    tryRunCommand,
     getWindowId,
     setWindowId,
-    getTagColor,
+    defaultColorGenerator,
 } from './utils'
 
 
@@ -61,26 +62,7 @@ class TimeTracer {
                 showInStatusBar: getSetting('ui.showInStatusBar'),
                 hoursPerWorkDay: getSetting('ui.hoursPerWorkDay'),
                 openReportInSplitPane: getSetting('ui.openReportInSplitPane'),
-                preferedChartColors: (() => {
-                    let index = 0
-                    const colors = preferedChartColors.split(' ')
-                    const usedIndices = {}
-                    return tag => {
-                        let color
-                        if (usedIndices.hasOwnProperty(tag)) {
-                            color = colors[usedIndices[tag]]
-                        }
-                        else {
-                            const i = index++
-                            usedIndices[tag] = i
-                            color = colors[i]
-                        }
-                        if (!color) {
-                            color = getTagColor(tag)
-                        }
-                        return color
-                    }
-                })(),
+                preferedChartColors: defaultColorGenerator(preferedChartColors),
                 ...ui,
             },
         }
@@ -141,25 +123,19 @@ class TimeTracer {
         }
 
         const command = this._getCommand('start')
-        try {
-            const {stdout, stderr} = await runCommand(command)
-            if (stderr) {
-                console.warn(stderr)
-                atom.notifications.addWarning(
-                    `Time tracking started without an error but something was printed to 'stderr': ${stderr}`,
-                    {dismissable: true}
-                )
+        const success = await tryRunCommand(command, {
+            stderrNotificationText: stderr => {
+                return `Something was printed to stderr while starting time tracking: ${stderr}`
+            },
+            errorNotificationTex: error => {
+                return `Failed to start time tracking. Reason: ${error.message}`
+            },
+            shouldIgnoreError: error => {
+                return error.message.toLowerCase().includes('already started')
             }
-            else {
-                console.log('stdout:', stdout)
-                this.isTracking = true
-            }
-        }
-        catch (error) {
-            atom.notifications.addError(
-                `Failed to start time tracking. Reason: ${error.message}`,
-                {dismissable: true},
-            )
+        })
+        if (success) {
+            this.isTracking = true
         }
     }
 
@@ -170,25 +146,19 @@ class TimeTracer {
 
         console.log('stopping......', atom.getCurrentWindow().getTitle())
         const command = this._getCommand('stop')
-        try {
-            const {stdout, stderr} = await runCommand(command)
-            if (stderr) {
-                console.warn(stderr)
-                atom.notifications.addWarning(
-                    `Time tracking stopped without an error but something was printed to 'stderr': ${stderr}`,
-                    {dismissable: true}
-                )
+        const success = await tryRunCommand(command, {
+            stderrNotificationText: stderr => {
+                return `Something was printed to stderr while stopping time tracking: ${stderr}`
+            },
+            errorNotificationTex: error => {
+                return `Failed to stop time tracking. Reason: ${error.message}`
+            },
+            shouldIgnoreError: error => {
+                return error.message.toLowerCase().includes('no project started')
             }
-            else {
-                console.log('stdout:', stdout)
-                this.isTracking = false
-            }
-        }
-        catch (error) {
-            atom.notifications.addError(
-                `Failed to stop time tracking. Reason: ${error.message}`,
-                {dismissable: true},
-            )
+        })
+        if (success) {
+            this.isTracking = false
         }
     }
 
