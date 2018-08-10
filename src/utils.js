@@ -112,7 +112,7 @@ export const getTagColor = tag => {
 }
 
 export const replacePlaceholders = (str, replacements) => {
-    return str.replace(/((%project)|(%tags)|(%files)|(%branches)|(%path))/g, match => {
+    return str.replace(/((%project)|(%tags)|(%branches)|(%path))/g, match => {
         return replacements[match]
     })
 }

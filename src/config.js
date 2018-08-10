@@ -5,7 +5,6 @@ const placeholders = {
     '%project': 'project',
     '%tags': 'tags',
     '%branches': 'branches',
-    '%files': 'changed files',
     '%path': 'project path',
 }
 const placeholdersText = (
@@ -137,5 +136,3 @@ export const config = {
 
 
 export const get = key => atom.config.get(`time-tracer.${key}`)
-
-// const getDefault = key => atom.config.getSchema(`time-tracer.${key}`).default
