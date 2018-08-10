@@ -5,21 +5,14 @@ import {exec} from 'child_process'
 import os from 'os'
 
 import fs from 'fs-extra'
+import moment from 'moment'
+
 
 export const log = (
     atom.inDevMode()
     ? (...args) => console.log(...args)
     : () => {}
 )
-
-const getProjectName = () => {
-    return (
-        atom.project.getPaths()
-        .map(projectPath => path.basename(projectPath))
-        .join('__')
-    )
-}
-
 
 export const getTimeracerConfig = async () => {
     const projectPaths = atom.project.getPaths()
@@ -63,8 +56,15 @@ export const getTimeracerConfig = async () => {
     }
     return config
 }
+const getProjectName = () => {
+    return (
+        atom.project.getPaths()
+        .map(projectPath => path.basename(projectPath))
+        .join('__')
+    )
+}
 
-export const defaultColorGenerator = preferedChartColors => {
+export const defaultColorGenerator = (preferedChartColors='') => {
     let index = 0
     const colors = preferedChartColors.split(' ')
     const usedIndices = {}
@@ -83,6 +83,24 @@ export const defaultColorGenerator = preferedChartColors => {
         }
         return color
     }
+}
+
+export const reportDataIsValid = reportData => {
+    if (!Array.isArray(reportData)) {
+        return false
+    }
+    for (const datum of reportData) {
+        const {start, stop, tags=[]} = datum
+        const isValid = (
+            moment(start).isValid()
+            && moment(stop).isValid()
+            && Array.isArray(tags)
+        )
+        if (!isValid) {
+            return false
+        }
+    }
+    return true
 }
 
 let getTagColorCache = {}

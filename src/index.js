@@ -1,7 +1,6 @@
 'use babel'
 
 import throttle from 'lodash.throttle'
-import moment from 'moment'
 
 import StatusBarTile from './status-bar-tile'
 import Commands from './commands'
@@ -14,6 +13,7 @@ import {
     getWindowId,
     setWindowId,
     defaultColorGenerator,
+    reportDataIsValid,
     log,
 } from './utils'
 
@@ -41,7 +41,7 @@ class TimeTracer {
         const {
             tracking={},
             tool={},
-            ui: {preferedChartColors, ...ui},
+            ui: {preferedChartColors, ...ui}={},
             ...general
         } = await getTimeracerConfig()
         // TODO: subscribe to config changes (https://atom.io/docs/api/v1.28.2/Config#instance-onDidChange)
@@ -163,6 +163,38 @@ class TimeTracer {
         }
     }
 
+    report = async() => {
+        const command = this._getCommand('log')
+        const {stdout} = await runCommand(command)
+        let reportData
+        try {
+            reportData = JSON.parse(stdout)
+        }
+        catch (error) {
+            atom.notifications.addError(
+                'Invalid report data. Your log command must return valid JSON.'
+            )
+            return
+        }
+
+        if (reportDataIsValid(reportData)) {
+            this.reportData = reportData
+            const prevActivePane = atom.workspace.getActivePane()
+            const options = {searchAllPanes: true}
+            if (this.settings.ui.openReportInSplitPane) {
+                options.split = 'right'
+            }
+            await atom.workspace.open(TIME_TRACER_REPORT_URI, options)
+            prevActivePane.activate()
+        }
+        else {
+            atom.notifications.addError(
+                'Invalid report data. Expected shape {start, stop, tags} where start and '
+                + 'stop and momentjs compatible and tags is an array of strings.'
+            )
+        }
+    }
+
     async resetTimer() {
         clearTimeout(this.timer)
         clearInterval(this.statusBarInterval)
@@ -189,39 +221,6 @@ class TimeTracer {
             }, tickMs)
         }
         this.lastEdit = now
-    }
-
-    report = async() => {
-        const command = this._getCommand('log')
-        const {stdout} = await runCommand(command)
-        let reportData
-        try {
-            reportData = JSON.parse(stdout)
-        }
-        catch (error) {
-            atom.notifications.addError(
-                'Invalid report data. Your log command must return valid JSON.'
-            )
-            return
-        }
-
-        const {start, stop, tags} = reportData
-        if (moment(start).isValid() && moment(stop).isValid() && Array.isArray(tags)) {
-            this.reportData = reportData
-            const prevActivePane = atom.workspace.getActivePane()
-            const options = {searchAllPanes: true}
-            if (this.settings.ui.openReportInSplitPane) {
-                options.split = 'right'
-            }
-            await atom.workspace.open(TIME_TRACER_REPORT_URI, options)
-            prevActivePane.activate()
-        }
-        else {
-            atom.notifications.addError(
-                'Invalid report data. Expected shape {start, stop, tags} where start and '
-                + 'stop and momentjs compatible and tags is an array of strings.'
-            )
-        }
     }
 
     async getSeconds() {

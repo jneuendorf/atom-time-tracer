@@ -7,6 +7,8 @@ No more forgetting to start the timer!
 
 ```bash
 apm install time-tracer
+# on macOS (see https://tailordev.github.io/Watson/#installation for more details)
+brew install watson
 ```
 
 ## Usage
