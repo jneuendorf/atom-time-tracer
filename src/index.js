@@ -1,5 +1,7 @@
 'use babel'
 
+import path from 'path'
+
 import throttle from 'lodash.throttle'
 
 import StatusBarTile from './status-bar-tile'
@@ -9,12 +11,16 @@ import {
     getTimeracerConfig,
     replacePlaceholders,
     runCommand,
+    runCommandDetached,
     tryRunCommand,
     getWindowId,
     setWindowId,
     defaultColorGenerator,
     reportDataIsValid,
     log,
+    findBinaryPath,
+    osType,
+    PROJECT_DIR,
 } from './utils'
 
 
@@ -25,18 +31,19 @@ let TimeTracerReportView
 
 class TimeTracer {
     config = config
-    lastEdit = 0
+    lastEditTimestamp = 0
     timer = null
     statusBarInterval = null
     isTracking = false
     reportData = null
+    sleepWatcherProcess = null
 
     _throttledHandleActivity = null
 
     async activate(state) {
-        let didActivate
-        this.activationPromise = new Promise((resolve, reject) => {
-            didActivate = resolve
+        let didLoadConfig
+        this.loadConfigPromise = new Promise((resolve, reject) => {
+            didLoadConfig = resolve
         })
         const {
             tracking={},
@@ -58,6 +65,9 @@ class TimeTracer {
                 stop: getSetting('tool.stop'),
                 report: getSetting('tool.report'),
                 log: getSetting('tool.log'),
+                sleepWatcher: await findBinaryPath(
+                    getSetting('tool.sleepWatcher').replace('%os', osType())
+                ),
                 ...tool,
             },
             ui: {
@@ -68,6 +78,7 @@ class TimeTracer {
                 ...ui,
             },
         }
+        didLoadConfig()
 
         this.currentWindow = atom.getCurrentWindow()
         this.currentWindow.on('focus', this.handleFocusWindow)
@@ -82,6 +93,7 @@ class TimeTracer {
         }
 
         if (getSetting('tracking.startOnOpen')) {
+            // Dont' wait.
             this.handleActivity()
         }
 
@@ -97,11 +109,38 @@ class TimeTracer {
                 )
             }
         })
-        didActivate()
+
+        // Check if machine sleep can be handled.
+        const {tool: {sleepWatcher, stop}} = this.settings
+        if (!sleepWatcher) {
+            const sleepWatcherSetting = (
+                getSetting('tool.sleepWatcher')
+                .replace('%os', osType())
+            )
+            atom.notifications.addWarning(
+                `Couldn't find the \`sleep watcher\` binary at \`${sleepWatcherSetting}\`. Check the settings!`,
+                {dismissable: true},
+            )
+        }
+        else {
+            const setWindowIdScript = path.join(
+                PROJECT_DIR,
+                'scripts',
+                'set-window-id.js',
+            )
+            this.sleepWatcherProcess = runCommandDetached(
+                `${sleepWatcher} 'node ${setWindowIdScript} -1; ${stop}'`,
+                error => atom.notifications.addError(
+                    `Could not start sleep watcher process. Reason: ${error.message}`,
+                    {dismissable: true},
+                )
+            )
+        }
     }
 
     deactivate() {
         this.stop()
+        this.sleepWatcherProcess && this.sleepWatcherProcess.kill()
         this.fileWatcher.dispose()
         this.statusBarTile && this.statusBarTile.destroy()
         for (const eventType of this.settings.tracking.regardedEvents) {
@@ -113,7 +152,7 @@ class TimeTracer {
     }
 
     async consumeStatusBar(statusBar) {
-        await this.activationPromise
+        await this.loadConfigPromise
         if (this.settings.ui.showInStatusBar) {
             this.statusBarTile = new StatusBarTile(statusBar, this)
         }
@@ -202,7 +241,11 @@ class TimeTracer {
         const now = Date.now()
         const {waitTillAutoStop} = this.settings.tracking
         const msTillAutoStop = waitTillAutoStop * 1000
-        if (now - this.lastEdit > msTillAutoStop && this.lastEdit > 0) {
+        const idle = (
+            now - this.lastEditTimestamp >= msTillAutoStop
+            && this.lastEditTimestamp > 0
+        )
+        if (idle) {
             this.stop()
             this.updateStatusBar({percent: 0})
         }
@@ -220,7 +263,7 @@ class TimeTracer {
                 this.updateStatusBar({percent: 1 - percent})
             }, tickMs)
         }
-        this.lastEdit = now
+        this.lastEditTimestamp = now
     }
 
     async getSeconds() {
@@ -266,12 +309,24 @@ class TimeTracer {
         const {id: currentWindowId} = this.currentWindow
         const prevWindowWasAtom = prevWindowId !== currentWindowId
         if (prevWindowWasAtom) {
-            log('prev window was another atom window!')
-            // The stop command must stop everything including other projects'
-            // trackings.
-            await this.stop()
-            await setWindowId(currentWindowId)
-            await this.handleActivity()
+            if (prevWindowId >= 0) {
+                log('prev window was another atom window!')
+                // The stop command must stop everything including other projects'
+                // trackings.
+                await this.stop()
+                await setWindowId(currentWindowId)
+                await this.handleActivity()
+            }
+            else {
+                log('woke up from sleep')
+                clearInterval(this.statusBarInterval)
+                if (this._throttledHandleActivity) {
+                    this._throttledHandleActivity.cancel()
+                }
+                this.updateStatusBar({percent: 0})
+                // prevWindowId === -1 => restore the actual window ID.
+                await setWindowId(currentWindowId)
+            }
         }
         // else: Prev window was another App than Atom. We don't do anything.
         else {

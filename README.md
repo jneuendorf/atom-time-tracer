@@ -1,7 +1,7 @@
 # atom-time-tracer
 
 Atomatic time tracking powered by any command line tool (default is [watson](http://tailordev.github.io/Watson/)) for Atom.
-No more forgetting to start the timer!
+Never again forget starting or stopping the timer!
 
 ## Features
 
@@ -10,7 +10,8 @@ No more forgetting to start the timer!
 - use the power of NodeJS to fully customize command arguments
 - starts tracking time automatically when you work in Atom
 - stops tracking time when you're inactive in Atom
-- [ ] stops tracking when your machine goes to sleep
+- stops tracking when your machine goes to sleep
+    - currently only macOS is supported without any extra work (see [Installation](#installation))
 - upon Atom window switch tracking is also switched from the previous project to the current window's one
 - check your stats
     - overall in the status bar
@@ -23,6 +24,11 @@ apm install time-tracer
 # on macOS (see https://tailordev.github.io/Watson/#installation for more details)
 brew install watson
 ```
+
+If you're not on macOS and want to enable automatically stop tracking
+when your machine goes to sleep, you have to install a command line tool
+of your choice on your user's shell `$PATH` and add the tool's name to the
+`sleep watcher` setting.
 
 ## Usage
 

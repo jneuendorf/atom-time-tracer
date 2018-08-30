@@ -10,7 +10,7 @@ const placeholders = {
 const placeholdersText = (
     Object.entries(placeholders)
     .map(([placeholder, description]) => {
-        return `${placeholder} (${description})`
+        return `\`${placeholder}\` (${description})`
     })
     .join(', ')
 )
@@ -71,29 +71,36 @@ export const config = {
                 order: 1,
                 type: 'string',
                 default: 'watson start %project %tags',
-                title: 'Command for starting tracking time',
-                description: `Possible placeholders: ${placeholdersText}`,
+                title: 'start',
+                description: `Command for starting tracking time. Possible placeholders: ${placeholdersText}`,
             },
             stop: {
                 order: 2,
                 type: 'string',
                 default: 'watson stop',
-                title: 'Command for stopping tracking **all** trackings',
-                description: `Possible placeholders: ${placeholdersText}`,
+                title: 'stop',
+                description: `Command for stopping tracking ALL trackings. Possible placeholders: ${placeholdersText}`,
             },
             report: {
                 order: 3,
                 type: 'string',
                 default: 'watson report --project %project --json',
-                title: 'Command for getting tracked-time data in JSON format',
-                description: `Possible placeholders: ${placeholdersText}`,
+                title: 'report',
+                description: `Command for getting tracked-time data in JSON format. Possible placeholders: ${placeholdersText}`,
             },
             log: {
                 order: 4,
                 type: 'string',
                 default: 'watson log --project %project --json',
-                title: 'Command for getting detailed tracked-time data in JSON format',
-                description: `Used for creating the report chart. Possible placeholders: ${placeholdersText}`,
+                title: 'log',
+                description: `Command for getting detailed tracked-time data in JSON format. Used for creating the report chart. Possible placeholders: ${placeholdersText}`,
+            },
+            sleepWatcher: {
+                order: 5,
+                type: 'string',
+                default: `./bin/sleepwatcher-%os`,
+                title: 'sleep watcher',
+                description: 'Command for executing its first argument when the machine goes to sleep. The `stop` command from above will be executed. The binary\'s path must be relative to package\'s project directory (shipped with package), available on `$PATH` or absolute. `%os` is `mac`, `linux`, `windows` or else `os.type()`.',
             },
         },
     },

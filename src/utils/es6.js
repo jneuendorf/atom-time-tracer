@@ -7,6 +7,8 @@ import os from 'os'
 import fs from 'fs-extra'
 import moment from 'moment'
 
+import {PROJECT_DIR} from './cjs'
+
 
 export const log = (
     atom.inDevMode()
@@ -85,6 +87,50 @@ export const defaultColorGenerator = (preferedChartColors='') => {
     }
 }
 
+export const findBinaryPath = async pathOrName => {
+    // relative or absolute path
+    if (pathOrName.includes(path.sep)) {
+        const resolvedPath = path.resolve(PROJECT_DIR, pathOrName)
+        if (await fs.pathExists(resolvedPath)) {
+            return resolvedPath
+        }
+        else {
+            return null
+        }
+    }
+    // binary name
+    else {
+        // Based on https://github.com/springernature/hasbin/blob/5af037b8e28c7de6c35187e0dcc44cd2dc75e9cc/lib/hasbin.js#L55-L65
+        const envPath = process.env.PATH || ''
+        const envExtParts = (process.env.PATHEXT || '').split(path.delimiter)
+        const possiblePaths = (
+            envPath.replace(/["]+/g, '').split(path.delimiter)
+            .map(chunk => envExtParts.map(ext => path.join(chunk, pathOrName + ext)))
+            .reduce((a, b) => a.concat(b))
+        )
+        for (const possiblePath of possiblePaths) {
+            if (await fs.pathExists(possiblePath)) {
+                return possiblePath
+            }
+        }
+        return null
+    }
+}
+
+export const osType = () => {
+    const kernelType = os.type()
+    switch (kernelType) {
+        case 'Darwin':
+            return 'mac'
+        case 'Linux':
+            return 'linux'
+        case 'Windows_NT':
+            return 'windows'
+        default:
+            return kernelType
+    }
+}
+
 export const reportDataIsValid = reportData => {
     if (!Array.isArray(reportData)) {
         return false
@@ -131,6 +177,19 @@ export const runCommand = command => {
     })
 }
 
+// Can't wait for the process to end.
+export const runCommandDetached = (command, handleError) => {
+    log(command)
+    return exec(command, (error, stdout, stderr) => {
+        if (error) {
+            handleError && handleError(error)
+        }
+        else {
+            log('successfully started sleep watcher', stdout)
+        }
+    })
+}
+
 export const tryRunCommand = async (command, options={}) => {
     const {
         stderrNotificationText=(stderr => stderr),
@@ -164,27 +223,6 @@ export const tryRunCommand = async (command, options={}) => {
         )
         return false
     }
-}
-
-const WINDOW_ID_FILENAME = path.join(
-    os.tmpdir(),
-    'time-tracer',
-    'focused_window_id.txt',
-)
-log('using', WINDOW_ID_FILENAME)
-export const getWindowId = async () => {
-    if (await fs.pathExists(WINDOW_ID_FILENAME)) {
-        const content = await fs.readFile(WINDOW_ID_FILENAME, 'utf8')
-        return parseInt(content.trim(), 10)
-    }
-    else {
-        return null
-    }
-}
-
-export const setWindowId = async id => {
-    await fs.ensureDir(path.dirname(WINDOW_ID_FILENAME))
-    await fs.writeFile(WINDOW_ID_FILENAME, `${id}`)
 }
 
 // Returns a random integer between min (inclusive) and max (inclusive).
