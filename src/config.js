@@ -124,14 +124,21 @@ export const config = {
                 title: 'Hours per work day',
                 description: 'This affects the calculation of the status bar\'s tile\'s tooltip',
             },
-            openReportInSplitPane: {
+            ignoredCommandErrorsRegex: {
                 order: 3,
+                type: 'string',
+                default: 'already started|no project started',
+                title: 'Regex for ignoring command errors',
+                description: 'If an error occurs while running a command it will not be displayed if its message is matched by the specified regular expression.',
+            },
+            openReportInSplitPane: {
+                order: 4,
                 type: 'boolean',
                 default: true,
                 title: 'Open report chart in a split pane',
             },
             preferedChartColors: {
-                order: 4,
+                order: 5,
                 type: 'string',
                 default: '',
                 title: 'Prefered chart colors',

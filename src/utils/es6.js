@@ -193,9 +193,9 @@ export const runCommandDetached = (command, handleError) => {
 export const tryRunCommand = async (command, options={}) => {
     const {
         stderrNotificationText=(stderr => stderr),
-        stderrDismissable=true,
+        stderrDismissable=false,
         errorNotificationText=(error => error.message),
-        errorDismissable=true,
+        errorDismissable=false,
         shouldIgnoreError=(error => false)
     } = options
     try {

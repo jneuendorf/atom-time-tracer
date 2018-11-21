@@ -172,7 +172,8 @@ class TimeTracer {
                 return `Failed to start time tracking. Reason: ${error.message}`
             },
             shouldIgnoreError: error => {
-                return error.message.toLowerCase().includes('already started')
+                const regex = new RegExp(getSetting('ui.ignoredCommandErrorsRegex'), 'i')
+                return regex.test(error.message)
             }
         })
         if (success) {
@@ -194,7 +195,8 @@ class TimeTracer {
                 return `Failed to stop time tracking. Reason: ${error.message}`
             },
             shouldIgnoreError: error => {
-                return error.message.toLowerCase().includes('no project started')
+                const regex = new RegExp(getSetting('ui.ignoredCommandErrorsRegex'), 'i')
+                return regex.test(error.message)
             }
         })
         if (success) {
