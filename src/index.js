@@ -159,7 +159,7 @@ class TimeTracer {
     }
 
     async start() {
-        if (this.isTracking) {
+        if (this.isTracking || atom.project.getPaths().length === 0) {
             return
         }
 
