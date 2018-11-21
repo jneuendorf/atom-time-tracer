@@ -1,6 +1,6 @@
 {
   "name": "time-tracer",
-  "version": "1.2.0",
+  "version": "1.2.1",
   "description": "Automatic time tracking powered by any command line tool for Atom",
   "main": "src/index.js",
   "scripts": {
