@@ -53,7 +53,6 @@ export const config = {
                     'dblclick',
                     'dragend',
                     'keyup',
-                    'mousemove',
                     'mousewheel',
                     'scroll',
                     'resize'
