@@ -16,6 +16,9 @@ Never again forget starting or stopping the timer!
 - check your stats
     - overall in the status bar
     - by day and tag using the `report` command
+- keep tracking your time while you're in a meeting (using the `meeting` command)
+    - a `meeting` tag is added to your current project tracking by default
+    - you can specify another project in the appearing in-Atom lock-screen
 
 ## Installation
 
@@ -64,7 +67,7 @@ All keys of the Atom settings may be overwritten.
 See the [example config file](https://github.com/jneuendorf/atom-time-tracer/blob/master/timetracer.config.js).
 
 Additionally, the `name` and `tags` properties may be defined.
-`name` equals `%project` (default is all project folder names joined by `__`) and `tags` equals `%tags` (default `[]`) in the command settings.
+`name` equals `%project` (default is all project folder names joined by `__`) and `tags` equals `%tags` (default `''`) in the command settings.
 
 Since the config file is a JS file you can dynamically generate tags.
 You could for example use the staged files as tags to see how long you've approximately worked on certain files.
