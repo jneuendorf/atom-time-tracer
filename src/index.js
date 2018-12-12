@@ -37,6 +37,8 @@ class TimeTracer {
     isTracking = false
     reportData = null
     sleepWatcherProcess = null
+    meetingOverlay = null
+    meetingInterval = null
 
     _throttledHandleActivity = null
 
@@ -136,6 +138,39 @@ class TimeTracer {
                 )
             )
         }
+
+        const meetingOverlay = document.createElement('div')
+        meetingOverlay.classList.add('time-tracer-meeting')
+        meetingOverlay.innerHTML = `<div class='note'>
+            <h1>
+                I'll keep tracking your time<br />
+                with a <code>meeting</code> tag.
+            </h1>
+            <h3>Grab a &#x2615; and enjoy your meeting. &#x1F642;</h3>
+            <br />
+            <button class='btn done'>Done Meeting</button>
+            <br />
+            <br />
+            <br />
+            <div class='text-smaller'>
+                Other project than <code>${this.settings.name}</code>?
+            </div>
+            <input class='input-text project-name' type='text' />
+        </div>`
+        const listener = event => {
+            this.meetingInterval = clearInterval(this.meetingInterval)
+            if (event.key === 'Enter') {
+                this.startMeeting(event.target.value)
+            }
+        }
+        const input = meetingOverlay.querySelector('.project-name')
+        input.addEventListener('keyup', listener)
+        meetingOverlay.querySelector('.btn.done').addEventListener(
+            'click',
+            this.stopMeeting,
+        )
+        atom.views.getView(atom.workspace).appendChild(meetingOverlay)
+        this.meetingOverlay = meetingOverlay
     }
 
     deactivate() {
@@ -143,6 +178,7 @@ class TimeTracer {
         this.sleepWatcherProcess && this.sleepWatcherProcess.kill()
         this.fileWatcher.dispose()
         this.statusBarTile && this.statusBarTile.destroy()
+        this.meetingOverlay.remove()
         for (const eventType of this.settings.tracking.regardedEvents) {
             document.body.removeEventListener(
                 eventType,
@@ -236,6 +272,64 @@ class TimeTracer {
         }
     }
 
+    showMeetingOverlay() {
+        let remainingSeconds = 10
+        const placeholder = 'Enter it here'
+        const button = this.meetingOverlay.querySelector('.btn.done')
+        const input = this.meetingOverlay.querySelector('.project-name')
+
+        // Initialize state
+        button.disabled = true
+        input.placeholder = `${placeholder} (${remainingSeconds})`
+        input.value = ''
+        input.disabled = false
+
+        this.meetingInterval = setInterval(
+            () => {
+                if (remainingSeconds > 0) {
+                    input.placeholder = `${placeholder} (${remainingSeconds})`
+                    remainingSeconds--
+                }
+                else {
+                    this.meetingInterval = clearInterval(this.meetingInterval)
+                    button.disabled = false
+                    input.disabled = true
+                    input.placeholder = this.settings.name
+                    this.startMeeting()
+                }
+            },
+            1000
+        )
+        this.meetingOverlay.classList.add('visible')
+    }
+
+    async startMeeting(projectName) {
+        // Create backup of changed settings to restore them later.
+        this.settings.tracking._waitTillAutoStop = this.settings.tracking.waitTillAutoStop
+        this.settings._name = this.settings.name
+        this.settings._tags = this.settings.tags
+
+        // Set custom project name.
+        if (projectName) {
+            this.settings.name = projectName
+        }
+        this.settings.tracking.waitTillAutoStop = Infinity
+        this.settings.tags = `${this.settings.tags} +meeting`
+        await this.stop()
+        this.start()
+    }
+
+    stopMeeting = async event => {
+        // Restore original settings.
+        this.settings.tracking.waitTillAutoStop = this.settings.tracking._waitTillAutoStop
+        this.settings.name = this.settings._name
+        this.settings.tags = this.settings._tags
+
+        await this.stop()
+        this.meetingOverlay.classList.remove('visible')
+        this.start()
+    }
+
     async resetTimer() {
         clearTimeout(this.timer)
         clearInterval(this.statusBarInterval)
@@ -312,7 +406,7 @@ class TimeTracer {
         const prevWindowWasAtom = prevWindowId !== currentWindowId
         if (prevWindowWasAtom) {
             if (prevWindowId >= 0) {
-                log('prev window was another atom window!')
+                log('prev window was another Atom window!')
                 // The stop command must stop everything including other projects'
                 // trackings.
                 await this.stop()
@@ -332,7 +426,7 @@ class TimeTracer {
         }
         // else: Prev window was another App than Atom. We don't do anything.
         else {
-            log('prev window was another app!')
+            log('prev window was another app or another Atom window without \'time-tracer\' loaded!')
         }
     }
 

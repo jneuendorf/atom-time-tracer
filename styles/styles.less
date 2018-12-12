@@ -1,0 +1,75 @@
+@import 'ui-variables';
+
+
+.status-bar {
+    .time-tracer {
+        height: 100%;
+
+        .timer {
+            margin-left: 4px !important;
+            height: 100%;
+
+            canvas {
+                position: relative;
+                top: 50%;
+                transform: scale(-1, 1) translateY(-50%);
+            }
+        }
+
+        .color-info {
+            color: @text-color-success;
+        }
+    }
+}
+
+time-tracer-report {
+    text-align: center;
+    &:hover {
+        overflow: scroll;
+    }
+
+    canvas {
+        background-color: white;
+        transform: scale(0.995);
+    }
+}
+
+.workspace > .time-tracer-meeting {
+    background-color: @app-background-color;
+    bottom: 0;
+    display: none;
+    left: 0;
+    position: fixed;
+    right: 0;
+    top: 0;
+    z-index: 100;
+
+    &.visible {
+        display: block;
+    }
+
+    .note {
+        font-size: 2em;
+        left: 50%;
+        position: absolute;
+        text-align: center;
+        top: 50%;
+        transform: translate(-50%, -50%);
+        width: 75%;
+
+        h1, h3 {
+            line-height: 1.3em;
+        }
+
+        input {
+            display: inline-block;
+            max-width: 100%;
+            text-align: center;
+            width: 300px;
+
+            &:disabled {
+                cursor: not-allowed;
+            }
+        }
+    }
+}
