@@ -2,12 +2,11 @@
 
 import Chart from 'chart.js/dist/Chart.min.js'
 
-import {log} from './utils'
-
 
 export default class StatusBarTile {
     constructor(statusBar, timeTracer) {
-        this.props = {}
+        // Initial props
+        this.props = {projectName: timeTracer.settings.name}
         this.timeTracer = timeTracer
 
         const wrapper = document.createElement('span')
@@ -18,6 +17,7 @@ export default class StatusBarTile {
             </div>
             ${''/* Used for figuring out the current theme's colors. */}
             <div class='hidden color-info'></div>
+            <div class='inline-block project-name'>${this.props.projectName}</div>
         </div>`
         this.tileElement = wrapper.children[0]
         this.tileElement.addEventListener('click', timeTracer.report)
@@ -76,10 +76,13 @@ export default class StatusBarTile {
     }
 
     render(props) {
-        const {percent} = props
+        const {percent, projectName} = props
         if (percent != null && percent !== this.props.percent) {
             this.pieChart.data.datasets[0].data = this.getData(percent)
             this.pieChart.update()
+        }
+        if (projectName != null && projectName !== this.props.projectName) {
+            this.tileElement.querySelector('.project-name').innerText = projectName
         }
         this.props = {...this.props, ...props}
     }

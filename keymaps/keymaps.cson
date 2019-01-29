@@ -1,0 +1,3 @@
+# Cross-platform
+'atom-workspace.has-meeting-overlay':
+    'escape': 'time-tracer:hide-meeting-overlay'

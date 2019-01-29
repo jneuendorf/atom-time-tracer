@@ -162,7 +162,8 @@ class TimeTracer {
         const listener = event => {
             this.meetingInterval = clearInterval(this.meetingInterval)
             if (event.key === 'Enter') {
-                this.startMeeting(event.target.value)
+                const input = event.target.value
+                this.startMeeting(input)
             }
         }
         const input = meetingOverlay.querySelector('.project-name')
@@ -173,6 +174,12 @@ class TimeTracer {
         )
         atom.views.getView(atom.workspace).appendChild(meetingOverlay)
         this.meetingOverlay = meetingOverlay
+
+        atom.commands.add('atom-workspace', {
+            'time-tracer:hide-meeting-overlay': () => {
+                this.hideMeetingOverlay()
+            },
+        })
     }
 
     deactivate() {
@@ -294,31 +301,45 @@ class TimeTracer {
                 }
                 else {
                     this.meetingInterval = clearInterval(this.meetingInterval)
-                    button.disabled = false
-                    input.disabled = true
-                    input.placeholder = this.settings.name
-                    this.startMeeting()
+                    this.startMeeting(this.settings.name)
                 }
             },
             1000
         )
         this.meetingOverlay.classList.add('visible')
+        atom.views.getView(atom.workspace).classList.add('has-meeting-overlay')
+    }
+
+    async hideMeetingOverlay() {
+        this.meetingInterval = clearInterval(this.meetingInterval)
+        await this.stop()
+        this.meetingOverlay.classList.remove('visible')
+        atom.views.getView(atom.workspace).classList.remove('has-meeting-overlay')
     }
 
     async startMeeting(projectName) {
+        // Handle UI state of the 'this.meetingOverlay'.
+        const button = this.meetingOverlay.querySelector('.btn.done')
+        const input = this.meetingOverlay.querySelector('.project-name')
+        button.disabled = false
+        input.disabled = true
+        input.placeholder = projectName
+
         // Create backup of changed settings to restore them later.
         this.settings.tracking._waitTillAutoStop = this.settings.tracking.waitTillAutoStop
         this.settings._name = this.settings.name
         this.settings._tags = this.settings.tags
-
         // Set custom project name.
-        if (projectName) {
-            this.settings.name = projectName
-        }
+        this.settings.name = projectName
         this.settings.tracking.waitTillAutoStop = Infinity
         this.settings.tags = `${this.settings.tags} +meeting`
         await this.stop()
         await this.start()
+        this.updateStatusBar({projectName})
+        atom.notifications.addInfo(
+            `I am now tracking your meeting for '${projectName}'. `
+            + `Hit the button when you're done and have a nice meeting! ;)`
+        )
         this.powerSaveBlockerId = powerSaveBlocker.start('prevent-app-suspension')
     }
 
@@ -328,9 +349,10 @@ class TimeTracer {
         this.settings.name = this.settings._name
         this.settings.tags = this.settings._tags
 
-        await this.stop()
-        this.meetingOverlay.classList.remove('visible')
-        this.start()
+        await this.hideMeetingOverlay()
+        this.updateStatusBar({projectName: this.settings.name})
+        await this.start()
+        powerSaveBlocker.stop(this.powerSaveBlockerId)
     }
 
     async resetTimer() {

@@ -19,6 +19,7 @@ Never again forget starting or stopping the timer!
 - keep tracking your time while you're in a meeting (using the `meeting` command)
     - a `meeting` tag is added to your current project tracking by default
     - you can specify another project in the appearing in-Atom lock-screen
+    - hit `escape` to cancel
 
 ## Installation
 
@@ -71,6 +72,22 @@ Additionally, the `name` and `tags` properties may be defined.
 
 Since the config file is a JS file you can dynamically generate tags.
 You could for example use the staged files as tags to see how long you've approximately worked on certain files.
+
+### UI tweaks
+
+As always, you can use your Atom's `styles.less` to customize this package's style.
+For example, if you want only part of the status bar tile to be rendered, you can hide the others.
+In this case you should use the following selectors:
+
+```less
+.status-bar {
+    .time-tracer {
+        .icon {}
+        .timer {}
+        .project-name {}
+    }
+}
+```
 
 ## Thanks to
 
