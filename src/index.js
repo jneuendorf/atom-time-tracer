@@ -1,6 +1,7 @@
 'use babel'
 
 import path from 'path'
+import {powerSaveBlocker} from 'remote'
 
 import throttle from 'lodash.throttle'
 
@@ -39,6 +40,7 @@ class TimeTracer {
     sleepWatcherProcess = null
     meetingOverlay = null
     meetingInterval = null
+    powerSaveBlockerId = null
 
     _throttledHandleActivity = null
 
@@ -316,7 +318,8 @@ class TimeTracer {
         this.settings.tracking.waitTillAutoStop = Infinity
         this.settings.tags = `${this.settings.tags} +meeting`
         await this.stop()
-        this.start()
+        await this.start()
+        this.powerSaveBlockerId = powerSaveBlocker.start('prevent-app-suspension')
     }
 
     stopMeeting = async event => {

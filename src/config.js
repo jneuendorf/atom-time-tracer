@@ -112,7 +112,8 @@ export const config = {
                 order: 1,
                 type: 'boolean',
                 default: true,
-                title: 'Show tracked time in status bar',
+                title: 'Display a status bar tile',
+                description: 'The tile shows the activity indicator, the tracked time and the project name',
             },
             hoursPerWorkDay: {
                 order: 2,
