@@ -8,6 +8,7 @@ export default class Commands {
             'time-tracer:stop': () => timeTracer.stop(),
             'time-tracer:report': () => timeTracer.report(),
             'time-tracer:meeting': () => timeTracer.showMeetingOverlay(),
+            'time-tracer:hide-meeting-overlay': () => timeTracer.hideMeetingOverlay(),
         }
     }
 }

@@ -1,4 +1,4 @@
-# atom-time-tracer
+# time-tracer
 
 Atomatic time tracking powered by any command line tool (default is [watson](http://tailordev.github.io/Watson/)) for Atom.
 Never again forget starting or stopping the timer!

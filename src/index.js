@@ -97,7 +97,7 @@ class TimeTracer {
         }
 
         if (getSetting('tracking.startOnOpen')) {
-            // Dont' wait.
+            // Don't wait.
             this.handleActivity()
         }
 
@@ -174,12 +174,6 @@ class TimeTracer {
         )
         atom.views.getView(atom.workspace).appendChild(meetingOverlay)
         this.meetingOverlay = meetingOverlay
-
-        atom.commands.add('atom-workspace', {
-            'time-tracer:hide-meeting-overlay': () => {
-                this.hideMeetingOverlay()
-            },
-        })
     }
 
     deactivate() {
