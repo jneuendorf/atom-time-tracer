@@ -9,7 +9,8 @@ import StatusBarTile from './status-bar-tile'
 import Commands from './commands'
 import {config, get as getSetting} from './config'
 import {
-    getTimeracerConfig,
+    getDirectoryWithTimeTracerConfig,
+    getTimeTracerConfig,
     replacePlaceholders,
     runCommand,
     runCommandDetached,
@@ -49,12 +50,14 @@ class TimeTracer {
         this.loadConfigPromise = new Promise((resolve, reject) => {
             didLoadConfig = resolve
         })
+
+        const directory = await getDirectoryWithTimeTracerConfig()
         const {
             tracking={},
             tool={},
             ui: {preferedChartColors, ...ui}={},
             ...general
-        } = await getTimeracerConfig()
+        } = await getTimeTracerConfig(directory)
         // TODO: subscribe to config changes (https://atom.io/docs/api/v1.28.2/Config#instance-onDidChange)
         this.settings = {
             ...general,

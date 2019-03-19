@@ -15,45 +15,58 @@ export const log = (
     ? (...args) => console.log(...args)
     : () => {}
 )
+export const error = (
+    atom.inDevMode()
+    ? (...args) => console.error(...args)
+    : () => {}
+)
 
-export const getTimeracerConfig = async () => {
-    const projectPaths = atom.project.getPaths()
+export const getDirectoryWithTimeTracerConfig = async () => {
+    const directories = atom.project.getDirectories()
     const results = await Promise.all(
-        projectPaths
-        .map(projectPath => {
-            const configFile = path.join(projectPath, 'timetracer.config.js')
+        directories
+        .map(directory => {
+            const configFile = path.join(directory.getPath(), 'timetracer.config.js')
             return (
                 fs.pathExists(configFile)
-                .then(exists => [exists, configFile])
+                .then(exists => ({exists, directory, configFile}))
             )
         })
     )
-    const positives = results.filter(([exists, _]) => exists)
-    if (positives.length > 1) {
+    const positives = results.filter(({exists}) => exists)
+    if (positives.length === 0) {
+        return null
+    }
+    else if (positives.length === 1) {
+        return positives[0]
+    }
+    else {
         throw new Error('Multiple config files found...')
     }
+}
 
+export const getTimeTracerConfig = async directoryWithTimeTracerConfig => {
     const defaultConfig = {
         name: getProjectName(),
         tags: '',
     }
-    if (positives.length === 0) {
+    if (!directoryWithTimeTracerConfig) {
         log('using NO config file...')
         return defaultConfig
     }
 
     let config
     try {
-        const [_, configFile] = positives[0]
+        const {configFile} = directoryWithTimeTracerConfig
         log('using', configFile)
         config = {
             ...defaultConfig,
             ...require(configFile),
         }
     }
-    catch (error) {
+    catch (err) {
         log('using default config because of error')
-        error(error.message)
+        error(err.message)
         config = defaultConfig
     }
     return config
