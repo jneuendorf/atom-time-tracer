@@ -48,7 +48,7 @@ export const getDirectoryWithTimeTracerConfig = async () => {
 export const getTimeTracerConfig = async directoryWithTimeTracerConfig => {
     const defaultConfig = {
         name: getProjectName(),
-        tags: '',
+        tags: [],
     }
     if (!directoryWithTimeTracerConfig) {
         log('using NO config file...')

@@ -329,7 +329,7 @@ class TimeTracer {
         // Set custom project name.
         this.settings.name = projectName
         this.settings.tracking.waitTillAutoStop = Infinity
-        this.settings.tags = `${this.settings.tags} +meeting`
+        this.settings.tags = [...this.settings.tags, 'meeting']
         await this.stop()
         await this.start()
         this.updateStatusBar({projectName})
@@ -394,7 +394,7 @@ class TimeTracer {
     _getCommand(type) {
         return replacePlaceholders(this.settings.tool[type], {
             '%project': this.settings.name,
-            '%tags': this.settings.tags,
+            '%tags': this.settings.tags.map(tag => `+${tag}`).join(' '),
             '%branches': (
                 atom.project
                 .getRepositories()
