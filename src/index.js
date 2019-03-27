@@ -7,21 +7,17 @@ import throttle from 'lodash.throttle'
 
 import StatusBarTile from './status-bar-tile'
 import Commands from './commands'
-import {config, get as getSetting} from './config'
+import * as Config from './config'
+import * as Settings from './settings'
 import {
-    getDirectoryWithTimeTracerConfig,
-    getTimeTracerConfig,
     replacePlaceholders,
     runCommand,
     runCommandDetached,
     tryRunCommand,
     getWindowId,
     setWindowId,
-    defaultColorGenerator,
     reportDataIsValid,
     log,
-    findBinaryPath,
-    osType,
     PROJECT_DIR,
 } from './utils'
 
@@ -32,7 +28,9 @@ let TimeTracerReportView
 
 
 class TimeTracer {
-    config = config
+    config = Config.schema
+
+    activationPromise = null
     lastEditTimestamp = 0
     timer = null
     statusBarInterval = null
@@ -45,138 +43,108 @@ class TimeTracer {
 
     _throttledHandleActivity = null
 
-    async activate(state) {
-        let didLoadConfig
-        this.loadConfigPromise = new Promise((resolve, reject) => {
-            didLoadConfig = resolve
-        })
+    activate(state) {
+        this.activationPromise = (
+            new Promise((resolve, reject) => {
+                Settings.getInstance(this.onDidChangeSettings)
+                .then(settings => {
+                    this.settings = settings
+                    resolve()
+                })
+                .catch(error => {
+                    reject(error)
+                })
+            })
+            .then(() => {
+                this.currentWindow = atom.getCurrentWindow()
+                this.currentWindow.on('focus', this.handleFocusWindow)
 
-        const directory = await getDirectoryWithTimeTracerConfig()
-        const {
-            tracking={},
-            tool={},
-            ui: {preferedChartColors, ...ui}={},
-            ...general
-        } = await getTimeTracerConfig(directory)
-        // TODO: subscribe to config changes (https://atom.io/docs/api/v1.28.2/Config#instance-onDidChange)
-        this.settings = {
-            ...general,
-            tracking: {
-                startOnOpen: getSetting('tracking.startOnOpen'),
-                waitTillAutoStop: getSetting('tracking.waitTillAutoStop'),
-                regardedEvents: getSetting('tracking.regardedEvents').split(' '),
-                ...tracking,
-            },
-            tool: {
-                start: getSetting('tool.start'),
-                stop: getSetting('tool.stop'),
-                report: getSetting('tool.report'),
-                log: getSetting('tool.log'),
-                sleepWatcher: await findBinaryPath(
-                    getSetting('tool.sleepWatcher').replace('%os', osType())
-                ),
-                ...tool,
-            },
-            ui: {
-                showInStatusBar: getSetting('ui.showInStatusBar'),
-                hoursPerWorkDay: getSetting('ui.hoursPerWorkDay'),
-                openReportInSplitPane: getSetting('ui.openReportInSplitPane'),
-                preferedChartColors: defaultColorGenerator(preferedChartColors),
-                ...ui,
-            },
-        }
-        didLoadConfig()
-
-        this.currentWindow = atom.getCurrentWindow()
-        this.currentWindow.on('focus', this.handleFocusWindow)
-
-        // The file watcher is used for outside-of-Atom file changes.
-        this.fileWatcher = atom.project.onDidChangeFiles(this.handleActivity)
-        for (const eventType of this.settings.tracking.regardedEvents) {
-            document.body.addEventListener(
-                eventType,
-                this.handleActivity,
-            )
-        }
-
-        if (getSetting('tracking.startOnOpen')) {
-            // Don't wait.
-            this.handleActivity()
-        }
-
-        atom.commands.add('atom-workspace', Commands.boundTo(this))
-        atom.workspace.addOpener(uri => {
-            if (uri === TIME_TRACER_REPORT_URI) {
-                if (!TimeTracerReportView) {
-                    TimeTracerReportView = require('./time-tracer-report-view')
+                // The file watcher is used for outside-of-Atom file changes.
+                this.fileWatcher = atom.project.onDidChangeFiles(this.handleActivity)
+                const regardedEvents = this.settings.get('tracking.regardedEvents')
+                for (const eventType of regardedEvents) {
+                    document.body.addEventListener(
+                        eventType,
+                        this.handleActivity,
+                    )
                 }
-                return new TimeTracerReportView(
-                    this.settings,
-                    this.reportData,
-                )
-            }
-        })
 
-        // Check if machine sleep can be handled.
-        const {tool: {sleepWatcher, stop}} = this.settings
-        if (!sleepWatcher) {
-            const sleepWatcherSetting = (
-                getSetting('tool.sleepWatcher')
-                .replace('%os', osType())
-            )
-            atom.notifications.addWarning(
-                `Couldn't find the \`sleep watcher\` binary at \`${sleepWatcherSetting}\`. Check the settings!`,
-                {dismissable: true},
-            )
-        }
-        else {
-            const setWindowIdScript = path.join(
-                PROJECT_DIR,
-                'scripts',
-                'set-window-id.js',
-            )
-            this.sleepWatcherProcess = runCommandDetached(
-                `${sleepWatcher} 'node ${setWindowIdScript} -1; ${stop}'`,
-                error => atom.notifications.addError(
-                    `Could not start sleep watcher process. Reason: ${error.message}`,
-                    {dismissable: true},
-                )
-            )
-        }
+                if (this.settings.get('tracking.startOnOpen')) {
+                    // Don't wait.
+                    this.handleActivity()
+                }
 
-        const meetingOverlay = document.createElement('div')
-        meetingOverlay.classList.add('time-tracer-meeting')
-        meetingOverlay.innerHTML = `<div class='note'>
-            <h1>
-                I'll keep tracking your time<br />
-                with a <code>meeting</code> tag.
-            </h1>
-            <h3>Grab a &#x2615; and enjoy your meeting. &#x1F642;</h3>
-            <br />
-            <button class='btn done'>Done Meeting</button>
-            <br />
-            <br />
-            <br />
-            <div class='text-smaller'>
-                Other project than <code>${this.settings.name}</code>?
-            </div>
-            <input class='input-text project-name' type='text' />
-        </div>`
-        const listener = event => {
-            this.meetingInterval = clearInterval(this.meetingInterval)
-            if (event.key === 'Enter') {
-                const input = event.target.value
-                this.startMeeting(input)
-            }
-        }
-        const input = meetingOverlay.querySelector('.project-name')
-        input.addEventListener('keyup', listener)
-        meetingOverlay.querySelector('.btn.done').addEventListener(
-            'click',
-            this.stopMeeting,
+                atom.commands.add('atom-workspace', Commands.boundTo(this))
+                atom.workspace.addOpener(uri => {
+                    if (uri === TIME_TRACER_REPORT_URI) {
+                        if (!TimeTracerReportView) {
+                            TimeTracerReportView = require('./time-tracer-report-view')
+                        }
+                        return new TimeTracerReportView(
+                            this.settings,
+                            this.reportData,
+                        )
+                    }
+                })
+
+                // Check if machine sleep can be handled.
+                const {sleepWatcher, stop} = this.settings.get('tool')
+                if (!sleepWatcher) {
+                    atom.notifications.addWarning(
+                        `Couldn't find the \`sleep watcher\` binary at \`${sleepWatcher}\`. Check the settings!`,
+                        {dismissable: true},
+                    )
+                }
+                else {
+                    const setWindowIdScript = path.join(
+                        PROJECT_DIR,
+                        'scripts',
+                        'set-window-id.js',
+                    )
+                    this.sleepWatcherProcess = runCommandDetached(
+                        `${sleepWatcher} 'node ${setWindowIdScript} -1; ${stop}'`,
+                        error => atom.notifications.addError(
+                            `Could not start sleep watcher process. Reason: ${error.message}`,
+                            {dismissable: true},
+                        )
+                    )
+                }
+
+                const meetingOverlay = document.createElement('div')
+                meetingOverlay.classList.add('time-tracer-meeting')
+                meetingOverlay.innerHTML = `<div class='note'>
+                    <h1>
+                        I'll keep tracking your time<br />
+                        with a <code>meeting</code> tag.
+                    </h1>
+                    <h3>Grab a &#x2615; and enjoy your meeting. &#x1F642;</h3>
+                    <br />
+                    <button class='btn done'>Done Meeting</button>
+                    <br />
+                    <br />
+                    <br />
+                    <div class='text-smaller'>
+                        Other project than <code>${this.settings.get('name')}</code>?
+                    </div>
+                    <input class='input-text project-name' type='text' />
+                </div>`
+                const listener = event => {
+                    this.meetingInterval = clearInterval(this.meetingInterval)
+                    if (event.key === 'Enter') {
+                        const input = event.target.value
+                        this.startMeeting(input)
+                    }
+                }
+                const input = meetingOverlay.querySelector('.project-name')
+                input.addEventListener('keyup', listener)
+                meetingOverlay.querySelector('.btn.done').addEventListener(
+                    'click',
+                    this.stopMeeting,
+                )
+                atom.views.getView(atom.workspace).appendChild(meetingOverlay)
+                this.meetingOverlay = meetingOverlay
+            })
         )
-        atom.views.getView(atom.workspace).appendChild(meetingOverlay)
-        this.meetingOverlay = meetingOverlay
     }
 
     deactivate() {
@@ -184,8 +152,10 @@ class TimeTracer {
         this.sleepWatcherProcess && this.sleepWatcherProcess.kill()
         this.fileWatcher.dispose()
         this.statusBarTile && this.statusBarTile.destroy()
+        this.settings.dispose()
         this.meetingOverlay.remove()
-        for (const eventType of this.settings.tracking.regardedEvents) {
+        const regardedEvents = this.settings.get('tracking.regardedEvents')
+        for (const eventType of regardedEvents) {
             document.body.removeEventListener(
                 eventType,
                 this.handleActivity,
@@ -194,10 +164,15 @@ class TimeTracer {
     }
 
     async consumeStatusBar(statusBar) {
-        await this.loadConfigPromise
-        if (this.settings.ui.showInStatusBar) {
+        await this.activationPromise
+        if (this.settings.get('ui.showInStatusBar')) {
             this.statusBarTile = new StatusBarTile(statusBar, this)
         }
+    }
+
+    onDidChangeSettings = async () => {
+        await this.stop()
+        await this.start()
     }
 
     async start() {
@@ -214,7 +189,7 @@ class TimeTracer {
                 return `Failed to start time tracking. Reason: ${error.message}`
             },
             shouldIgnoreError: error => {
-                const regex = new RegExp(getSetting('ui.ignoredCommandErrorsRegex'), 'i')
+                const regex = new RegExp(this.settings.get('ui.ignoredCommandErrorsRegex'), 'i')
                 return regex.test(error.message)
             }
         })
@@ -237,7 +212,7 @@ class TimeTracer {
                 return `Failed to stop time tracking. Reason: ${error.message}`
             },
             shouldIgnoreError: error => {
-                const regex = new RegExp(getSetting('ui.ignoredCommandErrorsRegex'), 'i')
+                const regex = new RegExp(this.settings.get('ui.ignoredCommandErrorsRegex'), 'i')
                 return regex.test(error.message)
             }
         })
@@ -264,7 +239,7 @@ class TimeTracer {
             this.reportData = reportData
             const prevActivePane = atom.workspace.getActivePane()
             const options = {searchAllPanes: true}
-            if (this.settings.ui.openReportInSplitPane) {
+            if (this.settings.get('ui.openReportInSplitPane')) {
                 options.split = 'right'
             }
             await atom.workspace.open(TIME_TRACER_REPORT_URI, options)
@@ -298,7 +273,7 @@ class TimeTracer {
                 }
                 else {
                     this.meetingInterval = clearInterval(this.meetingInterval)
-                    this.startMeeting(this.settings.name)
+                    this.startMeeting(this.settings.get('name'))
                 }
             },
             1000
@@ -323,15 +298,14 @@ class TimeTracer {
         input.placeholder = projectName
 
         // Create backup of changed settings to restore them later.
-        this.settings.tracking._waitTillAutoStop = this.settings.tracking.waitTillAutoStop
-        this.settings._name = this.settings.name
-        this.settings._tags = this.settings.tags
+        this.settings.backup()
         // Set custom project name.
-        this.settings.name = projectName
-        this.settings.tracking.waitTillAutoStop = Infinity
-        this.settings.tags = [...this.settings.tags, 'meeting']
-        await this.stop()
-        await this.start()
+        this.settings.setMultiple({
+            name: projectName,
+            'tracking.waitTillAutoStop': Infinity,
+            'tags': [...this.settings.get('tags'), 'meeting'],
+        })
+
         this.updateStatusBar({projectName})
         atom.notifications.addInfo(
             `I am now tracking your meeting for '${projectName}'. `
@@ -341,13 +315,10 @@ class TimeTracer {
     }
 
     stopMeeting = async event => {
-        // Restore original settings.
-        this.settings.tracking.waitTillAutoStop = this.settings.tracking._waitTillAutoStop
-        this.settings.name = this.settings._name
-        this.settings.tags = this.settings._tags
+        this.settings.restore()
 
         await this.hideMeetingOverlay()
-        this.updateStatusBar({projectName: this.settings.name})
+        this.updateStatusBar({projectName: this.settings.get('name')})
         await this.start()
         powerSaveBlocker.stop(this.powerSaveBlockerId)
     }
@@ -357,7 +328,7 @@ class TimeTracer {
         clearInterval(this.statusBarInterval)
 
         const now = Date.now()
-        const {waitTillAutoStop} = this.settings.tracking
+        const waitTillAutoStop = this.settings.get('tracking.waitTillAutoStop')
         const msTillAutoStop = waitTillAutoStop * 1000
         const idle = (
             now - this.lastEditTimestamp >= msTillAutoStop
@@ -392,9 +363,10 @@ class TimeTracer {
     }
 
     _getCommand(type) {
-        return replacePlaceholders(this.settings.tool[type], {
-            '%project': this.settings.name,
-            '%tags': this.settings.tags.map(tag => `+${tag}`).join(' '),
+        const command = this.settings.get(`tool.${type}`)
+        return replacePlaceholders(command, {
+            '%project': this.settings.get('name'),
+            '%tags': this.settings.get('tags').map(tag => `+${tag}`).join(' '),
             '%branches': (
                 atom.project
                 .getRepositories()

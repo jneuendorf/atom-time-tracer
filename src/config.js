@@ -16,7 +16,7 @@ const placeholdersText = (
 )
 
 
-export const config = {
+export const schema = {
     tracking: {
         order: 1,
         type: 'object',

@@ -6,7 +6,7 @@ import Chart from 'chart.js/dist/Chart.min.js'
 export default class StatusBarTile {
     constructor(statusBar, timeTracer) {
         // Initial props
-        this.props = {projectName: timeTracer.settings.name}
+        this.props = {projectName: timeTracer.settings.get('name')}
         this.timeTracer = timeTracer
 
         const wrapper = document.createElement('span')
@@ -102,7 +102,7 @@ export default class StatusBarTile {
         let seconds = await this.timeTracer.getSeconds()
         const secondsPerMinute = 60
         const secondsPerHour = 60 * secondsPerMinute
-        const secondsPerWorkDay = this.timeTracer.settings.ui.hoursPerWorkDay * secondsPerHour
+        const secondsPerWorkDay = this.timeTracer.settings.get('ui.hoursPerWorkDay') * secondsPerHour
 
         const workDays = Math.floor(seconds / secondsPerWorkDay)
         seconds -= workDays * secondsPerWorkDay

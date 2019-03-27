@@ -35,29 +35,28 @@ export const getDirectoryWithTimeTracerConfig = async () => {
     )
     const positives = results.filter(({exists}) => exists)
     if (positives.length === 0) {
-        return null
+        return {exists: false, directory: null, configFile: null}
     }
     else if (positives.length === 1) {
         return positives[0]
     }
     else {
-        throw new Error('Multiple config files found...')
+        throw new Error('Found multipe config files. Make sure there is only 1 `timetracer.config.js` file across all project folders in the current Atom window!')
     }
 }
 
-export const getTimeTracerConfig = async directoryWithTimeTracerConfig => {
+export const getTimeTracerConfig = async configFile => {
     const defaultConfig = {
         name: getProjectName(),
         tags: [],
     }
-    if (!directoryWithTimeTracerConfig) {
+    if (!configFile) {
         log('using NO config file...')
         return defaultConfig
     }
 
     let config
     try {
-        const {configFile} = directoryWithTimeTracerConfig
         log('using', configFile)
         config = {
             ...defaultConfig,
