@@ -36,7 +36,7 @@ export const schema = {
             },
             regardedEvents: {
                 order: 3,
-                type: 'string',
+                type: 'array',
                 // Mostly taken from https://gist.github.com/ardcore/9262498
                 default: [
                     'core:copy',
@@ -56,7 +56,10 @@ export const schema = {
                     'mousewheel',
                     'scroll',
                     'resize'
-                ].join(' '),
+                ],
+                items: {
+                    type: 'string',
+                },
                 title: 'Events that extend the timer until auto stop',
             },
         },

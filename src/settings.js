@@ -97,10 +97,8 @@ class Settings {
         const sleepWatcher = await findBinaryPath(
             settingsFromConfig.tool.sleepWatcher.replace('%os', osType())
         )
-        const regardedEvents = settingsFromConfig.tracking.regardedEvents.split(' ')
         return deepmerge(settingsFromConfig, {
             tool: {sleepWatcher},
-            tracking: {regardedEvents},
         })
     }
 
