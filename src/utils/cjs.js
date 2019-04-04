@@ -11,7 +11,7 @@ const WINDOW_ID_FILE = path.join(
     'time-tracer',
     'focused_window_id.txt',
 )
-if (atom.inDevMode()) {
+if (typeof(atom) !== 'undefined' && atom.inDevMode()) {
     console.log('using', WINDOW_ID_FILE)
 }
 
