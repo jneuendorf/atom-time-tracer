@@ -194,6 +194,18 @@ class TimeTracer {
             }
         })
         if (success) {
+            const onStart = this.settings.get('onStart')
+            if (onStart) {
+                try {
+                    onStart(this._getPlaceholderData())
+                }
+                catch (error) {
+                    atom.notifications.addWarning(
+                        `The following error occured in the 'onStart' callback: `
+                        + ` ${error.message}`
+                    )
+                }
+            }
             this.isTracking = true
         }
     }
@@ -217,6 +229,18 @@ class TimeTracer {
             }
         })
         if (success) {
+            const onStop = this.settings.get('onStop')
+            if (onStop) {
+                try {
+                    onStop(this._getPlaceholderData())
+                }
+                catch (error) {
+                    atom.notifications.addWarning(
+                        `The following error occured in the 'onStop' callback: `
+                        + ` ${error.message}`
+                    )
+                }
+            }
             this.isTracking = false
         }
     }
@@ -364,18 +388,27 @@ class TimeTracer {
 
     _getCommand(type) {
         const command = this.settings.get(`tool.${type}`)
+        const {project, tags, branches, path} = this._getPlaceholderData()
         return replacePlaceholders(command, {
-            '%project': this.settings.get('name'),
-            '%tags': this.settings.get('tags').map(tag => `+${tag}`).join(' '),
-            '%branches': (
+            '%project': project,
+            '%tags': tags.map(tag => `+${tag}`).join(' '),
+            '%branches': branches.join(' '),
+            '%path': path,
+        })
+    }
+
+    _getPlaceholderData() {
+        return {
+            project: this.settings.get('name'),
+            tags: this.settings.get('tags'),
+            branches: (
                 atom.project
                 .getRepositories()
                 .filter(repo => repo)
                 .map(repo => repo.getShortHead())
-                .join(' ')
             ),
-            '%path': atom.project.getPaths()[0],
-        })
+            path: atom.project.getPaths()[0],
+        }
     }
 
     // throttled for i.e. scrolling

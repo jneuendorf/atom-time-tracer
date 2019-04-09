@@ -65,13 +65,16 @@ See the [config](https://github.com/jneuendorf/atom-time-tracer/blob/master/src/
 
 This file can and should be used to add/overwrite project specific settings.
 All keys of the Atom settings may be overwritten.
-See the [example config file](https://github.com/jneuendorf/atom-time-tracer/blob/master/timetracer.config.js).
 
 Additionally, the `name` and `tags` properties may be defined.
 `name` equals `%project` (default is all project folder names joined by `__`) and `tags` equals `%tags` (default `''`) in the command settings.
 
+Furthermore, you can define callbacks for `onStart` and `onStop` to run a JavaScript function in addition to or instead of the `start` and `stop` commands, respectively.
+
 Since the config file is a JS file you can dynamically generate tags.
 You could for example use the staged files as tags to see how long you've approximately worked on certain files.
+
+See the [example config file](https://github.com/jneuendorf/atom-time-tracer/blob/master/timetracer.config.js).
 
 ### UI tweaks
 
