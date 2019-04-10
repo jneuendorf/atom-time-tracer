@@ -1,9 +1,12 @@
 'use babel'
 
-import Chart from 'chart.js/dist/Chart.min.js'
+// SVG piechart taken from https://css-tricks.com/how-to-make-charts-with-svg/
+const PIECHART_SIZE = 16
+const PIECHART_CIRCUMFERENCE = Math.PI * PIECHART_SIZE / 2
 
 
 export default class StatusBarTile {
+
     constructor(statusBar, timeTracer) {
         // Initial props
         this.props = {projectName: timeTracer.settings.get('name')}
@@ -13,14 +16,13 @@ export default class StatusBarTile {
         wrapper.innerHTML = `<div class='inline-block time-tracer'>
             <span class="icon icon-watch"></span>
             <div class='inline-block timer'>
-                <canvas width='14' height='14'></canvas>
+                <svg width='${PIECHART_SIZE}' height='${PIECHART_SIZE}' class='piechart'>
+                    <circle r='${PIECHART_SIZE/4}' cx='${PIECHART_SIZE/2}' cy='${PIECHART_SIZE/2}' class='pie'/>
+                </svg>
             </div>
-            ${''/* Used for figuring out the current theme's colors. */}
-            <div class='hidden color-info'></div>
             <div class='inline-block project-name'>${this.props.projectName}</div>
         </div>`
         this.tileElement = wrapper.children[0]
-        this.tileElement.addEventListener('click', timeTracer.report)
         this.tileElement.addEventListener('mouseenter', this.updateTooltip)
 
         // Add tile to the DOM.
@@ -43,52 +45,18 @@ export default class StatusBarTile {
             {item: this.tooltipElement},
         )
 
-        // The computed style can be retrieved only after the element was added
-        // to the DOM.
-        const successColor = (
-            window.getComputedStyle(this.tileElement.querySelector('.color-info'))
-            .getPropertyValue('color')
-        )
-        this.pieChart = new Chart(this.tileElement.querySelector('canvas'), {
-            type: 'pie',
-            data: {
-                datasets: [{
-                    data: this.getData(0),
-                    backgroundColor: [
-                        successColor, 'rgba(0, 0, 0, 0)',
-                    ],
-                    borderWidth: [0, 0],
-                    hoverBorderWidth: [0, 0],
-                }],
-            },
-            options: {
-                legend: {
-                    display: false,
-                },
-                tooltips: {
-                    enabled: false,
-                },
-                animation: {
-                    duration: 0,
-                },
-            },
-        })
+        this.pieChartCircle = this.tileElement.querySelector('.piechart circle')
     }
 
     render(props) {
         const {percent, projectName} = props
         if (percent != null && percent !== this.props.percent) {
-            this.pieChart.data.datasets[0].data = this.getData(percent)
-            this.pieChart.update()
+            this.pieChartCircle.style.strokeDasharray = `${percent * PIECHART_CIRCUMFERENCE} ${PIECHART_CIRCUMFERENCE}`
         }
         if (projectName != null && projectName !== this.props.projectName) {
             this.tileElement.querySelector('.project-name').innerText = projectName
         }
         this.props = {...this.props, ...props}
-    }
-
-    getData(percent) {
-        return [percent, 1 - percent]
     }
 
     updateTooltip = async () => {
@@ -119,7 +87,6 @@ export default class StatusBarTile {
     destroy() {
         this.statusBarTile.destroy()
         this.tooltipDisposable.dispose()
-        this.tileElement.removeEventListener('click', this.timeTracer.report)
         this.tileElement.removeEventListener('mouseenter', this.updateTooltip)
     }
 }

@@ -6,7 +6,6 @@ export default class Commands {
         return {
             'time-tracer:start': () => timeTracer.start(),
             'time-tracer:stop': () => timeTracer.stop(),
-            'time-tracer:report': () => timeTracer.report(),
             'time-tracer:meeting': () => timeTracer.showMeetingOverlay(),
             'time-tracer:hide-meeting-overlay': () => timeTracer.hideMeetingOverlay(),
         }

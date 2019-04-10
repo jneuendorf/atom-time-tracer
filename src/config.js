@@ -34,8 +34,15 @@ export const schema = {
                 default: 600,
                 title: 'How long to wait after last activity (seconds)',
             },
-            regardedEvents: {
+            observeGitBranches: {
                 order: 3,
+                type: 'boolean',
+                default: false,
+                title: 'Restart tracking after git branch has changed',
+                description: 'Only branch changes in the project containing the time-tracer config file are detected.',
+            },
+            regardedEvents: {
+                order: 4,
                 type: 'array',
                 // Mostly taken from https://gist.github.com/ardcore/9262498
                 default: [
@@ -74,31 +81,24 @@ export const schema = {
                 type: 'string',
                 default: 'watson start %project %tags',
                 title: 'start',
-                description: `Command for starting tracking time. Possible placeholders: ${placeholdersText}`,
+                description: `Command for starting tracking time. Possible placeholders: ${placeholdersText}.`,
             },
             stop: {
                 order: 2,
                 type: 'string',
                 default: 'watson stop',
                 title: 'stop',
-                description: `Command for stopping tracking ALL trackings. Possible placeholders: ${placeholdersText}`,
+                description: `Command for stopping tracking ALL trackings. Possible placeholders: ${placeholdersText}.`,
             },
             report: {
                 order: 3,
                 type: 'string',
                 default: 'watson report --project %project --json',
                 title: 'report',
-                description: `Command for getting tracked-time data in JSON format. Possible placeholders: ${placeholdersText}`,
-            },
-            log: {
-                order: 4,
-                type: 'string',
-                default: 'watson log --project %project --json',
-                title: 'log',
-                description: `Command for getting detailed tracked-time data in JSON format. Used for creating the report chart. Possible placeholders: ${placeholdersText}`,
+                description: `Command for getting tracked-time data in JSON format. Possible placeholders: ${placeholdersText}.`,
             },
             sleepWatcher: {
-                order: 5,
+                order: 4,
                 type: 'string',
                 default: `./bin/sleepwatcher-%os`,
                 title: 'sleep watcher',
@@ -116,7 +116,7 @@ export const schema = {
                 type: 'boolean',
                 default: true,
                 title: 'Display a status bar tile',
-                description: 'The tile shows the activity indicator, the tracked time and the project name',
+                description: 'The tile shows the activity indicator, the tracked time and the project name.',
             },
             hoursPerWorkDay: {
                 order: 2,
@@ -125,7 +125,7 @@ export const schema = {
                 minimum: 1,
                 maximum: 24,
                 title: 'Hours per work day',
-                description: 'This affects the calculation of the status bar\'s tile\'s tooltip',
+                description: 'This affects the calculation of the status bar\'s tile\'s tooltip.',
             },
             ignoredCommandErrorsRegex: {
                 order: 3,
@@ -134,22 +134,6 @@ export const schema = {
                 title: 'Regex for ignoring command errors',
                 description: 'If an error occurs while running a command it will not be displayed if its message is matched by the specified regular expression.',
             },
-            openReportInSplitPane: {
-                order: 4,
-                type: 'boolean',
-                default: true,
-                title: 'Open report chart in a split pane',
-            },
-            preferedChartColors: {
-                order: 5,
-                type: 'string',
-                default: '',
-                title: 'Prefered chart colors',
-                description: 'List of space separated color strings (thus no spaces allowed between color values). See http://www.chartjs.org/docs/latest/general/colors.html#colors for valid colors. If not specified or insufficient random colors will be used.',
-            },
         },
     },
 }
-
-
-export const get = key => atom.config.get(`time-tracer.${key}`)

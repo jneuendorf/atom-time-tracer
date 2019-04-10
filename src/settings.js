@@ -84,7 +84,7 @@ class Settings {
                 else {
                     const keyPath = `${topLevelKey}.${key}`
                     this.keyPaths.push(keyPath)
-                    return [key, Config.get(keyPath)]
+                    return [key, atom.config.get(`time-tracer.${keyPath}`)]
                 }
             },
             {deep: true},
@@ -110,7 +110,7 @@ class Settings {
 
         this.disposables.dispose()
         this.observeConfigChanges()
-        if (directory) {
+        if (directory && generalSettings.tracking.observeGitBranches) {
             this.observeGitBranchChanges(directory)
         }
     }

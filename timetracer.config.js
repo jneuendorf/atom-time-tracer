@@ -7,7 +7,4 @@ module.exports = {
     onStop: ({project, tags, branches, path}) => {
         console.log('stopped w/', project, tags, branches, path)
     },
-    ui: {
-        preferedChartColors: 'rgb(203,68,55) rgb(107,203,74)',
-    },
 }

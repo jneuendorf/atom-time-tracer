@@ -5,7 +5,6 @@ import {exec} from 'child_process'
 import os from 'os'
 
 import fs from 'fs-extra'
-import moment from 'moment'
 
 import {PROJECT_DIR} from './cjs'
 
@@ -78,27 +77,6 @@ const getProjectName = () => {
     )
 }
 
-export const defaultColorGenerator = (preferedChartColors='') => {
-    let index = 0
-    const colors = preferedChartColors.split(' ')
-    const usedIndices = {}
-    return tag => {
-        let color
-        if (usedIndices.hasOwnProperty(tag)) {
-            color = colors[usedIndices[tag]]
-        }
-        else {
-            const i = index++
-            usedIndices[tag] = i
-            color = colors[i]
-        }
-        if (!color) {
-            color = getTagColor(tag)
-        }
-        return color
-    }
-}
-
 export const findBinaryPath = async pathOrName => {
     // relative or absolute path
     if (pathOrName.includes(path.sep)) {
@@ -141,32 +119,6 @@ export const osType = () => {
         default:
             return kernelType
     }
-}
-
-export const reportDataIsValid = reportData => {
-    if (!Array.isArray(reportData)) {
-        return false
-    }
-    for (const datum of reportData) {
-        const {start, stop, tags=[]} = datum
-        const isValid = (
-            moment(start).isValid()
-            && moment(stop).isValid()
-            && Array.isArray(tags)
-        )
-        if (!isValid) {
-            return false
-        }
-    }
-    return true
-}
-
-let getTagColorCache = {}
-export const getTagColor = tag => {
-    if (!getTagColorCache[tag]) {
-        getTagColorCache[tag] = generateRandomColor([178, 240, 129])
-    }
-    return `rgb(${getTagColorCache[tag].join(',')})`
 }
 
 export const replacePlaceholders = (str, replacements) => {
@@ -235,22 +187,4 @@ export const tryRunCommand = async (command, options={}) => {
         )
         return false
     }
-}
-
-// Returns a random integer between min (inclusive) and max (inclusive).
-// https://stackoverflow.com/a/1527820/6928824
-const randomInt = (max, min=0) => {
-    return Math.floor(Math.random() * (max - min + 1)) + min
-}
-
-// https://stackoverflow.com/a/43235/6928824
-const generateRandomColor = ([mixRed, mixGreen, mixBlue]) => {
-    let red = randomInt(255)
-    let green = randomInt(255)
-    let blue = randomInt(255)
-    // mix the color
-    red = (red + mixRed) / 2
-    green = (green + mixGreen) / 2
-    blue = (blue + mixBlue) / 2
-    return [red, green, blue].map(Math.floor)
 }

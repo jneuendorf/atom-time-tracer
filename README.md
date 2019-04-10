@@ -13,9 +13,7 @@ Never again forget starting or stopping the timer!
 - stops tracking when your machine goes to sleep
     - currently only macOS is supported without any extra work (see [Installation](#installation))
 - upon Atom window switch tracking is also switched from the previous project to the current window's one
-- check your stats
-    - overall in the status bar
-    - by day and tag using the `report` command
+- check your stats in the status bar
 - keep tracking your time while you're in a meeting (using the `meeting` command)
     - a `meeting` tag is added to your current project tracking by default
     - you can specify another project in the appearing in-Atom lock-screen

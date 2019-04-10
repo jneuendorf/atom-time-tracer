@@ -16,15 +16,9 @@ import {
     tryRunCommand,
     getWindowId,
     setWindowId,
-    reportDataIsValid,
     log,
     PROJECT_DIR,
 } from './utils'
-
-
-const TIME_TRACER_REPORT_URI = 'time-tracer://report'
-// Lazily imported in Atom opener.
-let TimeTracerReportView
 
 
 class TimeTracer {
@@ -75,17 +69,6 @@ class TimeTracer {
                 }
 
                 atom.commands.add('atom-workspace', Commands.boundTo(this))
-                atom.workspace.addOpener(uri => {
-                    if (uri === TIME_TRACER_REPORT_URI) {
-                        if (!TimeTracerReportView) {
-                            TimeTracerReportView = require('./time-tracer-report-view')
-                        }
-                        return new TimeTracerReportView(
-                            this.settings,
-                            this.reportData,
-                        )
-                    }
-                })
 
                 // Check if machine sleep can be handled.
                 const {sleepWatcher, stop} = this.settings.get('tool')
@@ -242,38 +225,6 @@ class TimeTracer {
                 }
             }
             this.isTracking = false
-        }
-    }
-
-    report = async() => {
-        const command = this._getCommand('log')
-        const {stdout} = await runCommand(command)
-        let reportData
-        try {
-            reportData = JSON.parse(stdout)
-        }
-        catch (error) {
-            atom.notifications.addError(
-                'Invalid report data. Your log command must return valid JSON.'
-            )
-            return
-        }
-
-        if (reportDataIsValid(reportData)) {
-            this.reportData = reportData
-            const prevActivePane = atom.workspace.getActivePane()
-            const options = {searchAllPanes: true}
-            if (this.settings.get('ui.openReportInSplitPane')) {
-                options.split = 'right'
-            }
-            await atom.workspace.open(TIME_TRACER_REPORT_URI, options)
-            prevActivePane.activate()
-        }
-        else {
-            atom.notifications.addError(
-                'Invalid report data. Expected shape {start, stop, tags} where start and '
-                + 'stop and momentjs compatible and tags is an array of strings.'
-            )
         }
     }
 

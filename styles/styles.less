@@ -1,6 +1,11 @@
 @import 'ui-variables';
 
 
+// Must match PIECHART_SIZE in 'status-bar-tile.js'.
+@piechart-size: 16;
+@piechart-circumference: pi() * @piechart-size / 2;
+
+
 .status-bar {
     .time-tracer {
         height: 100%;
@@ -9,28 +14,22 @@
             margin-right: 2px !important;
             height: 100%;
 
-            canvas {
-                position: relative;
-                top: 50%;
-                transform: scale(-1, 1) translateY(-50%);
+            svg.piechart {
+                margin: 6px 3px 0 0;
+                transform: rotate(-90deg);
+                background: transparent;
+                border-radius: 50%;
+                display: block;
+
+                circle {
+                    fill: transparent;
+                    stroke: @text-color-success;
+                    stroke-width: @piechart-size / 2;
+                    stroke-dasharray: 0 @piechart-circumference;
+                    transition: stroke-dasharray .3s ease;
+                }
             }
         }
-
-        .color-info {
-            color: @text-color-success;
-        }
-    }
-}
-
-time-tracer-report {
-    text-align: center;
-    &:hover {
-        overflow: scroll;
-    }
-
-    canvas {
-        background-color: white;
-        transform: scale(0.995);
     }
 }
 
